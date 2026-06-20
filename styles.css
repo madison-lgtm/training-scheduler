@@ -170,12 +170,66 @@ h3 {
   align-items: start;
 }
 
+#roleView {
+  min-height: min(520px, calc(100vh - 150px));
+  place-items: center;
+}
+
 .panel {
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
+}
+
+.role-panel {
+  width: min(760px, 100%);
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.role-card {
+  display: grid;
+  gap: 8px;
+  min-height: 164px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.role-card:hover,
+.role-card:focus-visible {
+  border-color: rgba(20, 120, 88, 0.32);
+  background: var(--green-soft);
+  outline: none;
+}
+
+.role-card span {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.role-card strong {
+  font-size: 1.25rem;
+}
+
+.role-card small {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
 }
 
 .panel-heading,
@@ -186,6 +240,106 @@ h3 {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.student-step-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.student-step-tabs button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.student-step-tabs span,
+.step-heading span {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eef4f1;
+  color: var(--green);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.student-step-tabs button.active {
+  border-color: rgba(20, 120, 88, 0.24);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.student-step-tabs button.done {
+  color: var(--green);
+}
+
+.student-step {
+  display: none;
+}
+
+.student-step.active {
+  display: grid;
+  gap: 14px;
+}
+
+.step-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(20, 120, 88, 0.14);
+  border-radius: 8px;
+  background: var(--green-soft);
+}
+
+.step-heading p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.default-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.default-empty,
+.default-ready {
+  display: grid;
+  gap: 4px;
+}
+
+.default-empty span,
+.default-ready span,
+.default-ready small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.default-ready strong {
+  font-size: 1.05rem;
+}
+
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .form-grid,
@@ -391,11 +545,124 @@ textarea {
   gap: 12px;
 }
 
+.coach-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.coach-tabs button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.coach-tabs button.active {
+  border-color: rgba(20, 120, 88, 0.24);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.coach-page {
+  display: none;
+}
+
+.coach-page.active {
+  display: block;
+}
+
+.coach-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.coach-day-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.coach-day-card header {
+  display: grid;
+  gap: 3px;
+}
+
+.coach-day-card header strong {
+  font-size: 1.05rem;
+}
+
+.coach-day-card header span {
+  color: var(--green);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.day-slot-list {
+  display: grid;
+  gap: 8px;
+}
+
+.day-slot-row {
+  display: grid;
+  gap: 7px;
+  min-height: 92px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.day-slot-row time {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.day-slot-row div {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 6px;
+}
+
+.schedule-pill,
+.empty-pill {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.schedule-pill {
+  border: 1px solid rgba(20, 120, 88, 0.18);
+  background: var(--green-soft);
+  color: var(--ink);
+}
+
+.empty-pill {
+  border: 1px dashed var(--line);
+  color: var(--muted);
+}
+
 .workbench {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 310px;
   gap: 12px;
   align-items: start;
+}
+
+.coach-mobile-panel {
+  display: none;
 }
 
 .student-row + .student-row {
@@ -583,7 +850,8 @@ textarea {
 
 @media (max-width: 680px) {
   .app {
-    width: min(100% - 22px, 1480px);
+    width: min(100% - 18px, 1480px);
+    padding-top: 14px;
   }
 
   .topbar,
@@ -597,7 +865,209 @@ textarea {
   .form-grid,
   .routine-grid,
   .weekly-intent,
-  .session-item {
+  .session-item,
+  .role-grid,
+  .coach-schedule-grid {
     grid-template-columns: 1fr;
+  }
+
+  .coach-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #roleView {
+    min-height: auto;
+    place-items: stretch;
+  }
+
+  .role-card {
+    min-height: 138px;
+  }
+
+  .student-step-tabs {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+
+  .student-step-tabs button {
+    min-width: 92px;
+    min-height: 38px;
+    flex: 0 0 auto;
+  }
+
+  .step-heading {
+    padding: 10px;
+  }
+
+  #studentView {
+    grid-template-columns: 1fr;
+  }
+
+  .my-schedule {
+    order: -1;
+  }
+
+  .routine-box {
+    padding: 10px;
+  }
+
+  .routine-box p,
+  .intent-copy span,
+  .mini-heading span {
+    font-size: 0.9rem;
+  }
+
+  .availability-grid {
+    min-width: 0;
+    grid-template-columns: 72px repeat(4, minmax(86px, 1fr));
+    font-size: 0.85rem;
+  }
+
+  .availability-grid .head,
+  .availability-grid .time {
+    padding: 8px;
+  }
+
+  .slot-toggle {
+    min-height: 58px;
+    padding: 6px;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .coachbar {
+    gap: 10px;
+  }
+
+  .coachbar .muted {
+    display: none;
+  }
+
+  .coach-mobile-panel {
+    display: grid;
+    gap: 10px;
+  }
+
+  .workbench {
+    display: block;
+  }
+
+  .student-rail,
+  .calendar-panel {
+    display: none;
+  }
+
+  .detail-panel {
+    margin-top: 10px;
+  }
+
+  .mobile-day-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .mobile-day-tabs button {
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    font-weight: 900;
+  }
+
+  .mobile-day-tabs button.active {
+    border-color: rgba(20, 120, 88, 0.25);
+    background: var(--green-soft);
+    color: var(--green);
+  }
+
+  .mobile-location,
+  .mobile-slot,
+  .mobile-issue {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .mobile-location {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .mobile-location span,
+  .mobile-slot span,
+  .mobile-issue span {
+    color: var(--muted);
+  }
+
+  .mobile-slot-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .mobile-slot {
+    display: grid;
+    gap: 8px;
+    padding: 11px;
+  }
+
+  .mobile-slot.review {
+    background: var(--amber-soft);
+  }
+
+  .mobile-slot.error {
+    background: var(--red-soft);
+    border-color: rgba(170, 58, 58, 0.22);
+  }
+
+  .mobile-slot > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .mobile-people {
+    display: grid;
+    gap: 4px;
+    font-weight: 900;
+  }
+
+  .mobile-issue {
+    width: 100%;
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    text-align: left;
+  }
+
+  .mobile-issue + .mobile-issue {
+    margin-top: 8px;
+  }
+
+  .mobile-issue.review {
+    background: var(--amber-soft);
+  }
+
+  .mobile-issue.error {
+    background: var(--red-soft);
+    border-color: rgba(170, 58, 58, 0.22);
+  }
+
+  .empty.compact {
+    padding: 12px;
   }
 }

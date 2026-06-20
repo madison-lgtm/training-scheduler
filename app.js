@@ -15,20 +15,28 @@ const LOCATIONS = ["235 Grand", "Bisby"];
 const STORAGE_KEY = "training-scheduler-mvp-v1";
 const COACH_PIN = "2468";
 const CAPACITY = 2;
+const STUDENT_STEPS = ["身份", "课程", "地点", "时间", "提交"];
 
 let state = loadState();
 let selectedAvailability = new Set();
+let currentStudentStep = 0;
+let weeklyEditMode = false;
 let dragged = null;
 let currentIssue = null;
 let cloudStore = null;
 let cloudSaveTimer = null;
 let applyingRemoteState = false;
+let selectedMobileDay = getTodayDayId();
+let selectedCoachPage = "schedule";
 
 const els = {
   syncStatus: document.querySelector("#syncStatus"),
+  roleView: document.querySelector("#roleView"),
   studentView: document.querySelector("#studentView"),
   pinView: document.querySelector("#pinView"),
   coachView: document.querySelector("#coachView"),
+  roleStudent: document.querySelector("#roleStudent"),
+  roleCoach: document.querySelector("#roleCoach"),
   studentMode: document.querySelector("#studentMode"),
   coachEntry: document.querySelector("#coachEntry"),
   studentName: document.querySelector("#studentName"),
@@ -42,15 +50,31 @@ const els = {
   availabilityGrid: document.querySelector("#availabilityGrid"),
   studentNotes: document.querySelector("#studentNotes"),
   studentMessage: document.querySelector("#studentMessage"),
+  studentStepTabs: document.querySelector("#studentStepTabs"),
+  studentPrev: document.querySelector("#studentPrev"),
+  studentNext: document.querySelector("#studentNext"),
+  defaultSummary: document.querySelector("#defaultSummary"),
+  useDefaultWeek: document.querySelector("#useDefaultWeek"),
+  customizeWeek: document.querySelector("#customizeWeek"),
   submitRequest: document.querySelector("#submitRequest"),
   mySchedule: document.querySelector("#mySchedule"),
   coachPin: document.querySelector("#coachPin"),
   pinMessage: document.querySelector("#pinMessage"),
   unlockCoach: document.querySelector("#unlockCoach"),
+  coachScheduleTab: document.querySelector("#coachScheduleTab"),
+  coachWorkbenchTab: document.querySelector("#coachWorkbenchTab"),
+  coachSchedulePage: document.querySelector("#coachSchedulePage"),
+  coachWorkbenchPage: document.querySelector("#coachWorkbenchPage"),
+  coachScheduleTitle: document.querySelector("#coachScheduleTitle"),
+  coachScheduleOverview: document.querySelector("#coachScheduleOverview"),
   seedDemo: document.querySelector("#seedDemo"),
   generateDraft: document.querySelector("#generateDraft"),
+  exportCalendar: document.querySelector("#exportCalendar"),
   publishSchedule: document.querySelector("#publishSchedule"),
   requestCount: document.querySelector("#requestCount"),
+  mobileDayTabs: document.querySelector("#mobileDayTabs"),
+  mobileCoachDay: document.querySelector("#mobileCoachDay"),
+  mobileCoachIssues: document.querySelector("#mobileCoachIssues"),
   studentSummary: document.querySelector("#studentSummary"),
   locationRow: document.querySelector("#locationRow"),
   coachCalendar: document.querySelector("#coachCalendar"),
@@ -67,23 +91,35 @@ function init() {
   fillSelects();
   renderSessionGoals();
   renderAvailability();
+  renderDefaultSummary();
+  renderStudentSteps();
   renderMySchedule();
   bindEvents();
   initCloudStore();
 }
 
 function bindEvents() {
+  els.roleStudent.addEventListener("click", () => showView("student"));
+  els.roleCoach.addEventListener("click", () => showView("pin"));
   els.studentMode.addEventListener("click", () => showView("student"));
   els.coachEntry.addEventListener("click", () => showView("pin"));
   els.unlockCoach.addEventListener("click", unlockCoach);
+  els.coachScheduleTab.addEventListener("click", () => setCoachPage("schedule"));
+  els.coachWorkbenchTab.addEventListener("click", () => setCoachPage("workbench"));
   els.sessionCount.addEventListener("input", renderSessionGoals);
+  els.studentPrev.addEventListener("click", () => setStudentStep(currentStudentStep - 1));
+  els.studentNext.addEventListener("click", () => setStudentStep(currentStudentStep + 1));
+  els.useDefaultWeek.addEventListener("click", submitDefaultWeek);
+  els.customizeWeek.addEventListener("click", startWeeklyEdit);
   els.submitRequest.addEventListener("click", submitStudentRequest);
   els.studentName.addEventListener("input", () => {
     loadRoutineForName();
+    renderDefaultSummary();
     renderMySchedule();
   });
   els.seedDemo.addEventListener("click", seedDemo);
   els.generateDraft.addEventListener("click", generateDraft);
+  els.exportCalendar.addEventListener("click", exportCalendar);
   els.publishSchedule.addEventListener("click", publishSchedule);
   els.applyRecommendation.addEventListener("click", applyRecommendation);
 }
@@ -100,13 +136,83 @@ function fillSelects() {
 }
 
 function showView(name) {
-  [els.studentView, els.pinView, els.coachView].forEach((view) => view.classList.remove("active"));
+  [els.roleView, els.studentView, els.pinView, els.coachView].forEach((view) => view.classList.remove("active"));
+  if (name === "role") els.roleView.classList.add("active");
   if (name === "student") els.studentView.classList.add("active");
   if (name === "pin") els.pinView.classList.add("active");
   if (name === "coach") {
     els.coachView.classList.add("active");
     renderCoach();
   }
+}
+
+function setCoachPage(page) {
+  selectedCoachPage = page;
+  els.coachScheduleTab.classList.toggle("active", page === "schedule");
+  els.coachWorkbenchTab.classList.toggle("active", page === "workbench");
+  els.coachSchedulePage.classList.toggle("active", page === "schedule");
+  els.coachWorkbenchPage.classList.toggle("active", page === "workbench");
+}
+
+function renderStudentSteps() {
+  if (!els.studentStepTabs) return;
+  if (!weeklyEditMode) {
+    els.studentStepTabs.style.display = "none";
+    document.querySelectorAll(".student-step").forEach((step) => {
+      step.classList.toggle("active", Number(step.dataset.step) === 0);
+    });
+    els.studentPrev.style.display = "none";
+    els.studentNext.style.display = "none";
+    els.submitRequest.style.display = "none";
+    return;
+  }
+  els.studentStepTabs.style.display = "";
+  els.studentStepTabs.innerHTML = STUDENT_STEPS.map((label, index) => `
+    <button class="${index === currentStudentStep ? "active" : ""} ${index < currentStudentStep ? "done" : ""}" data-student-step="${index}">
+      <span>${index + 1}</span>${label}
+    </button>
+  `).join("");
+  els.studentStepTabs.querySelectorAll("[data-student-step]").forEach((button) => {
+    button.addEventListener("click", () => setStudentStep(Number(button.dataset.studentStep)));
+  });
+  document.querySelectorAll(".student-step").forEach((step) => {
+    step.classList.toggle("active", Number(step.dataset.step) === currentStudentStep);
+  });
+  els.studentPrev.style.display = currentStudentStep === 0 ? "none" : "";
+  els.studentNext.style.display = currentStudentStep === STUDENT_STEPS.length - 1 ? "none" : "";
+  els.submitRequest.style.display = currentStudentStep === STUDENT_STEPS.length - 1 ? "" : "none";
+}
+
+function setStudentStep(step) {
+  if (step > currentStudentStep && !canLeaveStudentStep(currentStudentStep)) return;
+  currentStudentStep = Math.max(0, Math.min(STUDENT_STEPS.length - 1, step));
+  els.studentMessage.textContent = "";
+  renderStudentSteps();
+}
+
+function startWeeklyEdit() {
+  if (!els.studentName.value.trim()) {
+    els.studentMessage.textContent = "先填名字或昵称。";
+    return;
+  }
+  weeklyEditMode = true;
+  setStudentStep(1);
+}
+
+function canLeaveStudentStep(step) {
+  if (step === 0 && !els.studentName.value.trim()) {
+    els.studentMessage.textContent = "先填名字或昵称。";
+    return false;
+  }
+  if (step === 2 && !document.querySelectorAll('input[name="location"]:checked').length) {
+    els.studentMessage.textContent = "至少选择一个地点偏好。";
+    return false;
+  }
+  if (step === 3 && !selectedAvailability.size) {
+    els.studentMessage.textContent = "至少选择一个可用时间。";
+    return false;
+  }
+  return true;
 }
 
 async function initCloudStore() {
@@ -199,6 +305,8 @@ function applyRemoteState(remoteState) {
   state = nextState;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   applyingRemoteState = false;
+  loadRoutineForName();
+  renderDefaultSummary();
   renderMySchedule();
   if (els.coachView.classList.contains("active")) renderCoach();
   setSyncStatus("云端同步中", "cloud");
@@ -244,16 +352,19 @@ function renderAvailability() {
 function submitStudentRequest() {
   const name = els.studentName.value.trim();
   if (!name) {
+    setStudentStep(0);
     els.studentMessage.textContent = "先填名字或昵称。";
     return;
   }
   if (!selectedAvailability.size) {
+    setStudentStep(3);
     els.studentMessage.textContent = "至少选择一个可用时间。";
     return;
   }
 
   const locations = [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value);
   if (!locations.length) {
+    setStudentStep(2);
     els.studentMessage.textContent = "至少选择一个地点偏好。";
     return;
   }
@@ -278,6 +389,10 @@ function submitStudentRequest() {
   state.requests.push(request);
   saveRoutine(name, request);
   saveState();
+  weeklyEditMode = false;
+  currentStudentStep = 0;
+  renderStudentSteps();
+  renderDefaultSummary();
   els.studentMessage.textContent = "已提交，等待教练确认。";
   renderMySchedule();
 }
@@ -290,13 +405,108 @@ function saveRoutine(name, request) {
   };
 }
 
+function getSavedRoutine() {
+  return state.routines[els.studentName.value.trim()] || null;
+}
+
+function hasUsableRoutine(routine) {
+  return Boolean(routine?.routine?.length && routine?.locations?.length);
+}
+
+function renderDefaultSummary() {
+  if (!els.defaultSummary) return;
+  const name = els.studentName.value.trim();
+  if (!name) {
+    els.defaultSummary.innerHTML = `
+      <div class="default-empty">
+        <strong>先输入名字</strong>
+        <span>如果之前设置过默认安排，这里会自动带出来。</span>
+      </div>
+    `;
+    els.useDefaultWeek.disabled = true;
+    els.customizeWeek.textContent = "填写本周申请";
+    return;
+  }
+  const routine = getSavedRoutine();
+  if (!hasUsableRoutine(routine)) {
+    els.defaultSummary.innerHTML = `
+      <div class="default-empty">
+        <strong>还没有默认安排</strong>
+        <span>先填写一次本周申请，并在最后一步设置默认偏好。之后就可以一键照常提交。</span>
+      </div>
+    `;
+    els.useDefaultWeek.disabled = true;
+    els.customizeWeek.textContent = "设置本周申请";
+    return;
+  }
+  const lines = routine.routine.map((item, index) => {
+    const goal = item.goal || routine.goals?.[index] || "教练安排";
+    return `${formatSlot(item.slotKey)} · ${goal}`;
+  });
+  els.defaultSummary.innerHTML = `
+    <div class="default-ready">
+      <span>默认安排</span>
+      <strong>${lines.join("；")}</strong>
+      <small>地点：${routine.locations.join(" / ")}</small>
+    </div>
+  `;
+  els.useDefaultWeek.disabled = false;
+  els.customizeWeek.textContent = "这周要改";
+}
+
+function submitDefaultWeek() {
+  const name = els.studentName.value.trim();
+  if (!name) {
+    els.studentMessage.textContent = "先填名字或昵称。";
+    return;
+  }
+  const routine = getSavedRoutine();
+  if (!hasUsableRoutine(routine)) {
+    els.studentMessage.textContent = "还没有默认安排，先填写一次本周申请。";
+    startWeeklyEdit();
+    return;
+  }
+  const request = {
+    id: makeId(),
+    name,
+    code: els.studentCode.value.trim(),
+    desiredCount: routine.routine.length,
+    goals: routine.routine.map((item, index) => item.goal || routine.goals?.[index] || "教练安排"),
+    locations: routine.locations,
+    availability: routine.routine.map((item) => item.slotKey),
+    notes: "本周照常。",
+    routine: routine.routine,
+    submittedAt: new Date().toISOString(),
+  };
+  state.requests = state.requests.filter((item) => item.name !== name || item.code !== request.code);
+  state.requests.push(request);
+  saveState();
+  weeklyEditMode = false;
+  currentStudentStep = 0;
+  renderStudentSteps();
+  els.studentMessage.textContent = "已按默认安排提交给教练。";
+  renderMySchedule();
+}
+
 function loadRoutineForName() {
-  const routine = state.routines[els.studentName.value.trim()];
+  const routine = getSavedRoutine();
   if (!routine) return;
   els.routineOne.value = routine.routine?.[0]?.slotKey || "";
   els.routineGoalOne.value = routine.routine?.[0]?.goal || "教练安排";
   els.routineTwo.value = routine.routine?.[1]?.slotKey || "";
   els.routineGoalTwo.value = routine.routine?.[1]?.goal || "教练安排";
+  document.querySelectorAll('input[name="location"]').forEach((input) => {
+    input.checked = routine.locations?.includes(input.value) || false;
+  });
+  if (routine.routine?.length) {
+    els.sessionCount.value = routine.routine.length;
+    renderSessionGoals();
+    document.querySelectorAll("[data-session-goal]").forEach((select, index) => {
+      select.value = routine.routine?.[index]?.goal || routine.goals?.[index] || "教练安排";
+    });
+    selectedAvailability = new Set(routine.routine.map((item) => item.slotKey).filter(Boolean));
+    renderAvailability();
+  }
 }
 
 function renderMySchedule() {
@@ -560,11 +770,142 @@ function findIssues(assignments, unassigned, dayLocations) {
 
 function renderCoach() {
   els.requestCount.textContent = `${state.requests.length} 人提交`;
+  setCoachPage(selectedCoachPage);
+  renderCoachScheduleOverview();
+  renderMobileCoach();
   renderStudentSummary();
   renderLocationRow();
   renderCoachCalendar();
   renderUnassigned();
   renderIssue(state.draft.issues[0] || null);
+}
+
+function renderCoachScheduleOverview() {
+  const isPublished = state.published.length > 0;
+  const assignments = isPublished ? state.published : state.draft.assignments;
+  els.coachScheduleTitle.textContent = isPublished ? "已发布安排" : "草案预览";
+
+  if (!assignments.length) {
+    els.coachScheduleOverview.innerHTML = `
+      <div class="empty">
+        还没有可查看的安排。可以先去「调整排课」生成草案。
+      </div>
+    `;
+    return;
+  }
+
+  els.coachScheduleOverview.innerHTML = `
+    <div class="coach-schedule-grid">
+      ${DAYS.map((day) => renderCoachDayOverview(day, assignments, isPublished)).join("")}
+    </div>
+  `;
+}
+
+function renderCoachDayOverview(day, assignments, isPublished) {
+  const dayItems = assignments.filter((item) => getDayId(item.slotKey) === day.id);
+  const location = getDayOverviewLocation(day.id, dayItems, isPublished);
+  return `
+    <article class="coach-day-card">
+      <header>
+        <strong>${day.label}</strong>
+        <span>${location}</span>
+      </header>
+      <div class="day-slot-list">
+        ${SLOTS.map((slot) => renderCoachSlotOverview(`${day.id}-${slot.id}`, assignments)).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderCoachSlotOverview(slotKey, assignments) {
+  const items = assignments.filter((item) => item.slotKey === slotKey);
+  return `
+    <section class="day-slot-row">
+      <time>${formatSlotTime(slotKey)}</time>
+      <div>
+        ${items.length ? items.map((item) => `
+          <span class="schedule-pill">${item.name} · ${item.goal}</span>
+        `).join("") : `<span class="empty-pill">空</span>`}
+      </div>
+    </section>
+  `;
+}
+
+function getDayOverviewLocation(dayId, dayItems, isPublished) {
+  if (isPublished) {
+    const location = dayItems.find((item) => item.location)?.location;
+    return location || "未安排地点";
+  }
+  return state.draft.dayLocations[dayId] || "地点待定";
+}
+
+function renderMobileCoach() {
+  renderMobileDayTabs();
+  renderMobileDay();
+  renderMobileIssues();
+}
+
+function renderMobileDayTabs() {
+  if (!els.mobileDayTabs) return;
+  els.mobileDayTabs.innerHTML = DAYS.map((day) => `
+    <button class="${selectedMobileDay === day.id ? "active" : ""}" data-mobile-day="${day.id}">${day.label}</button>
+  `).join("");
+  els.mobileDayTabs.querySelectorAll("[data-mobile-day]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedMobileDay = button.dataset.mobileDay;
+      renderMobileCoach();
+    });
+  });
+}
+
+function renderMobileDay() {
+  if (!els.mobileCoachDay) return;
+  const day = DAYS.find((item) => item.id === selectedMobileDay) || DAYS[0];
+  const location = state.draft.dayLocations[day.id] || "教练选择";
+  const dayAssignments = state.draft.assignments.filter((item) => getDayId(item.slotKey) === day.id);
+  els.mobileCoachDay.innerHTML = `
+    <div class="mobile-location">
+      <span>${day.label} 地点</span>
+      <strong>${location}</strong>
+    </div>
+    <div class="mobile-slot-list">
+      ${SLOTS.map((slot) => renderMobileSlot(`${day.id}-${slot.id}`, dayAssignments)).join("")}
+    </div>
+  `;
+}
+
+function renderMobileSlot(slotKey, dayAssignments) {
+  const assignments = dayAssignments.filter((item) => item.slotKey === slotKey);
+  const issue = state.draft.issues.find((item) => item.slotKey === slotKey);
+  return `
+    <article class="mobile-slot ${issue ? issue.severity : ""}" data-mobile-slot="${slotKey}">
+      <div>
+        <strong>${formatSlot(slotKey)}</strong>
+        <span>${state.draft.dayLocations[getDayId(slotKey)] || "教练选择"}</span>
+      </div>
+      <div class="mobile-people">
+        ${assignments.length ? assignments.map((item) => `<span>${item.name} · ${item.goal}</span>`).join("") : "<span>空</span>"}
+      </div>
+    </article>
+  `;
+}
+
+function renderMobileIssues() {
+  if (!els.mobileCoachIssues) return;
+  const issues = state.draft.issues.slice(0, 5);
+  if (!issues.length) {
+    els.mobileCoachIssues.innerHTML = `<div class="empty compact">暂无待处理问题。</div>`;
+    return;
+  }
+  els.mobileCoachIssues.innerHTML = issues.map((issue) => `
+    <button class="mobile-issue ${issue.severity}" data-mobile-issue="${issue.slotKey || issue.dayId || issue.sessionId || ""}">
+      <strong>${issue.title}</strong>
+      <span>${issue.text}</span>
+    </button>
+  `).join("");
+  els.mobileCoachIssues.querySelectorAll(".mobile-issue").forEach((button, index) => {
+    button.addEventListener("click", () => renderIssue(issues[index]));
+  });
 }
 
 function renderStudentSummary() {
@@ -1038,8 +1379,122 @@ function publishSchedule() {
   alert("已发布。学员回到提交页输入名字即可看到自己的安排。");
 }
 
+function exportCalendar() {
+  const assignments = state.published.length ? state.published : state.draft.assignments;
+  if (!assignments.length) {
+    alert("还没有可导出的安排。可以先生成草案或发布最终安排。");
+    return;
+  }
+
+  const weekStart = getNextTrainingMonday();
+  const ics = buildCalendarFile(assignments, weekStart);
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `training-schedule-${formatDateForFile(weekStart)}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildCalendarFile(assignments, weekStart) {
+  const now = formatIcsDateTime(new Date());
+  const events = allSlotKeys()
+    .map((slotKey) => buildCalendarEvent(slotKey, assignments, weekStart, now))
+    .filter(Boolean)
+    .join("\r\n");
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Training Scheduler//Private Coaching//ZH",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    events,
+    "END:VCALENDAR",
+  ].filter(Boolean).join("\r\n");
+}
+
+function buildCalendarEvent(slotKey, assignments, weekStart, now) {
+  const items = assignments.filter((item) => item.slotKey === slotKey);
+  if (!items.length) return null;
+  const start = getSlotDateTime(slotKey, weekStart, "start");
+  const end = getSlotDateTime(slotKey, weekStart, "end");
+  const location = items.find((item) => item.location)?.location || "地点待定";
+  const names = items.map((item) => item.name).join("、");
+  const goals = items.map((item) => `${item.name}: ${item.goal}`).join("\\n");
+
+  return [
+    "BEGIN:VEVENT",
+    `UID:${slotKey}-${formatDateForFile(weekStart)}@training-scheduler`,
+    `DTSTAMP:${now}`,
+    `DTSTART:${formatIcsDateTime(start)}`,
+    `DTEND:${formatIcsDateTime(end)}`,
+    `SUMMARY:${escapeIcsText(`私教课：${names}`)}`,
+    `LOCATION:${escapeIcsText(location)}`,
+    `DESCRIPTION:${escapeIcsText(goals)}`,
+    "END:VEVENT",
+  ].join("\r\n");
+}
+
+function getNextTrainingMonday() {
+  const today = new Date();
+  const result = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const day = result.getDay();
+  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 0 : 8 - day;
+  result.setDate(result.getDate() + daysUntilMonday);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function getSlotDateTime(slotKey, weekStart, edge) {
+  const [dayId, slotId] = slotKey.split("-");
+  const dayOffset = DAYS.findIndex((day) => day.id === dayId);
+  const time = getSlotClock(slotId, edge);
+  return new Date(
+    weekStart.getFullYear(),
+    weekStart.getMonth(),
+    weekStart.getDate() + dayOffset,
+    time.hour,
+    time.minute,
+  );
+}
+
+function getSlotClock(slotId, edge) {
+  if (slotId === "early") return edge === "start" ? { hour: 18, minute: 0 } : { hour: 19, minute: 0 };
+  return edge === "start" ? { hour: 19, minute: 15 } : { hour: 20, minute: 15 };
+}
+
+function formatIcsDateTime(date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+function formatDateForFile(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function escapeIcsText(text) {
+  return String(text)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\n/g, "\\n");
+}
+
 function allSlotKeys() {
   return DAYS.flatMap((day) => SLOTS.map((slot) => `${day.id}-${slot.id}`));
+}
+
+function getTodayDayId() {
+  const ids = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const today = ids[new Date().getDay()];
+  return DAYS.some((day) => day.id === today) ? today : "mon";
 }
 
 function getDayId(slotKey) {
@@ -1051,6 +1506,11 @@ function formatSlot(slotKey) {
   const day = DAYS.find((item) => item.id === dayId);
   const slot = SLOTS.find((item) => item.id === slotId);
   return `${day.label} ${slot.label}`;
+}
+
+function formatSlotTime(slotKey) {
+  const slotId = slotKey.split("-")[1];
+  return SLOTS.find((item) => item.id === slotId)?.label || "";
 }
 
 function makeId() {

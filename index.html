@@ -20,7 +20,30 @@
         </div>
       </header>
 
-      <section class="view active" id="studentView">
+      <section class="view active" id="roleView">
+        <section class="panel role-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Start</p>
+              <h2>你是来做什么的？</h2>
+            </div>
+          </div>
+          <div class="role-grid">
+            <button class="role-card" id="roleStudent" type="button">
+              <span>学员</span>
+              <strong>提交本周可上课时间</strong>
+              <small>也可以查看教练发布给你的本周安排。</small>
+            </button>
+            <button class="role-card" id="roleCoach" type="button">
+              <span>教练</span>
+              <strong>进入排课工作台</strong>
+              <small>需要输入 PIN 后才能查看所有学员和调整课表。</small>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="studentView">
         <section class="panel student-card">
           <div class="panel-heading">
             <div>
@@ -30,65 +53,63 @@
             <span class="week-label" id="studentWeekLabel"></span>
           </div>
 
-          <div class="form-grid">
-            <label class="field">
-              <span>名字或昵称</span>
-              <input id="studentName" placeholder="比如：苏" />
-            </label>
-            <label class="field">
-              <span>识别码（可选）</span>
-              <input id="studentCode" placeholder="比如手机号后四位" />
-            </label>
-          </div>
+          <div class="student-step-tabs" id="studentStepTabs"></div>
 
-          <section class="routine-box">
-            <div>
-              <h3>默认偏好</h3>
-              <p>第一次填完后会保存下来，本周可以临时修改。本地演示模式只保存在这个浏览器里。</p>
+          <section class="student-step active" data-step="0">
+            <div class="step-heading">
+              <span>1</span>
+              <div>
+                <h3>先告诉教练你是谁</h3>
+                <p>之后教练发布安排，你也用这个名字查看自己的课。</p>
+              </div>
             </div>
-            <div class="routine-grid">
+            <div class="form-grid">
               <label class="field">
-                <span>默认时间 1</span>
-                <select id="routineOne"></select>
+                <span>名字或昵称</span>
+                <input id="studentName" placeholder="比如：苏" />
               </label>
               <label class="field">
-                <span>默认内容 1</span>
-                <select id="routineGoalOne"></select>
-              </label>
-              <label class="field">
-                <span>默认时间 2</span>
-                <select id="routineTwo"></select>
-              </label>
-              <label class="field">
-                <span>默认内容 2</span>
-                <select id="routineGoalTwo"></select>
+                <span>识别码（可选）</span>
+                <input id="studentCode" placeholder="比如手机号后四位" />
               </label>
             </div>
+            <section class="default-panel">
+              <div id="defaultSummary"></div>
+              <div class="quick-actions">
+                <button class="primary" id="useDefaultWeek" type="button">这周照常</button>
+                <button class="ghost" id="customizeWeek" type="button">这周要改</button>
+              </div>
+            </section>
           </section>
 
-          <div class="weekly-intent">
-            <label class="field">
-              <span>本周想上几次</span>
-              <input id="sessionCount" type="number" min="1" max="6" value="1" />
-            </label>
-            <div class="intent-copy">
-              <strong>可用时间 ≠ 训练次数</strong>
-              <span>如果 8 个时间都有空，但只想上 1 节，就填 1，再勾选所有可用时间。</span>
+          <section class="student-step" data-step="1">
+            <div class="step-heading">
+              <span>2</span>
+              <div>
+                <h3>这周想怎么练</h3>
+                <p>先填想上几节，再给每节课选训练内容。</p>
+              </div>
             </div>
-          </div>
-
-          <section>
-            <div class="mini-heading">
-              <h3>每节课想练什么</h3>
-              <span>可以选具体内容，也可以交给教练安排。</span>
+            <div class="weekly-intent">
+              <label class="field">
+                <span>本周想上几次</span>
+                <input id="sessionCount" type="number" min="1" max="6" value="1" />
+              </label>
+              <div class="intent-copy">
+                <strong>可用时间 ≠ 训练次数</strong>
+                <span>如果 8 个时间都有空，但只想上 1 节，就填 1，再勾选所有可用时间。</span>
+              </div>
             </div>
             <div class="session-list" id="sessionGoals"></div>
           </section>
 
-          <section>
-            <div class="mini-heading">
-              <h3>地点偏好</h3>
-              <span>同一天教练只会在一个地点上课。</span>
+          <section class="student-step" data-step="2">
+            <div class="step-heading">
+              <span>3</span>
+              <div>
+                <h3>地点偏好</h3>
+                <p>可以选一个，也可以两个都选。最终地点由教练统一安排。</p>
+              </div>
             </div>
             <div class="choice-row">
               <label class="check-pill"><input type="checkbox" name="location" value="235 Grand" />235 Grand</label>
@@ -96,21 +117,59 @@
             </div>
           </section>
 
-          <section>
-            <div class="mini-heading">
-              <h3>本周所有可用时间</h3>
-              <span>教练会从这些时间里安排最终课程。</span>
+          <section class="student-step" data-step="3">
+            <div class="step-heading">
+              <span>4</span>
+              <div>
+                <h3>本周所有可用时间</h3>
+                <p>多选一点会更好排，教练会从这些时间里安排最终课程。</p>
+              </div>
             </div>
             <div class="availability-grid" id="availabilityGrid"></div>
           </section>
 
-          <label class="field">
-            <span>本周备注</span>
-            <textarea id="studentNotes" placeholder="比如：这周出差，周三不行；训练内容希望上下肢交替。"></textarea>
-          </label>
+          <section class="student-step" data-step="4">
+            <div class="step-heading">
+              <span>5</span>
+              <div>
+                <h3>确认并提交</h3>
+                <p>默认偏好可以选填。本周有特殊情况也可以写备注。</p>
+              </div>
+            </div>
+            <section class="routine-box">
+              <div>
+                <h3>默认偏好（可选）</h3>
+                <p>第一次填完后会保存下来，本周可以临时修改。本地演示模式只保存在这个浏览器里。</p>
+              </div>
+              <div class="routine-grid">
+                <label class="field">
+                  <span>默认时间 1</span>
+                  <select id="routineOne"></select>
+                </label>
+                <label class="field">
+                  <span>默认内容 1</span>
+                  <select id="routineGoalOne"></select>
+                </label>
+                <label class="field">
+                  <span>默认时间 2</span>
+                  <select id="routineTwo"></select>
+                </label>
+                <label class="field">
+                  <span>默认内容 2</span>
+                  <select id="routineGoalTwo"></select>
+                </label>
+              </div>
+            </section>
+            <label class="field">
+              <span>本周备注</span>
+              <textarea id="studentNotes" placeholder="比如：这周出差，周三不行；训练内容希望上下肢交替。"></textarea>
+            </label>
+          </section>
 
           <div class="submit-row">
             <div id="studentMessage" class="message"></div>
+            <button class="ghost" id="studentPrev" type="button">上一步</button>
+            <button class="ghost" id="studentNext" type="button">下一步</button>
             <button class="primary" id="submitRequest">提交给教练</button>
           </div>
         </section>
@@ -149,41 +208,85 @@
           <div>
             <p class="eyebrow">Coach Workspace</p>
             <h2>本周排课工作台</h2>
-            <p class="muted">先生成草案，再拖动学员微调，最后发布。</p>
+            <p class="muted">先查看已有安排，需要修改时再进入操作台。</p>
           </div>
           <div class="top-actions">
             <button class="ghost" id="seedDemo">填入示例</button>
             <button class="ghost" id="generateDraft">生成草案</button>
+            <button class="ghost" id="exportCalendar">导出日历</button>
             <button class="primary" id="publishSchedule">发布最终安排</button>
           </div>
         </header>
 
-        <section class="workbench">
-          <aside class="panel student-rail">
-            <div class="rail-heading">
-              <h3>学员状态</h3>
-              <span id="requestCount">0 人提交</span>
-            </div>
-            <div id="studentSummary"></div>
-          </aside>
+        <nav class="coach-tabs" aria-label="教练页面">
+          <button class="active" id="coachScheduleTab" type="button">查看安排</button>
+          <button id="coachWorkbenchTab" type="button">调整排课</button>
+        </nav>
 
-          <section class="panel calendar-panel">
-            <div class="location-row" id="locationRow"></div>
-            <div class="coach-calendar" id="coachCalendar"></div>
-            <section class="holding-pool">
-              <h3>待放入</h3>
-              <div id="unassignedPool" class="pool-items"></div>
+        <section class="coach-page active" id="coachSchedulePage">
+          <section class="panel schedule-overview-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Schedule</p>
+                <h2 id="coachScheduleTitle">本周安排</h2>
+              </div>
+            </div>
+            <div id="coachScheduleOverview"></div>
+          </section>
+        </section>
+
+        <section class="coach-page" id="coachWorkbenchPage">
+          <section class="coach-mobile-panel">
+            <section class="panel mobile-today">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Mobile Coach</p>
+                  <h2>手机快速查看</h2>
+                </div>
+              </div>
+              <div class="mobile-day-tabs" id="mobileDayTabs"></div>
+              <div id="mobileCoachDay"></div>
+            </section>
+
+            <section class="panel mobile-issues">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">To Review</p>
+                  <h2>待处理</h2>
+                </div>
+              </div>
+              <div id="mobileCoachIssues"></div>
             </section>
           </section>
 
-          <aside class="panel detail-panel">
-            <p class="eyebrow">当前问题</p>
-            <h3 id="issueTitle">选择一个有问题的格子</h3>
-            <p id="issueText" class="problem muted">系统会在这里显示问题和建议。</p>
-            <div id="issueRecommendation"></div>
-            <button class="primary full" id="applyRecommendation" disabled>应用推荐</button>
-          </aside>
+          <section class="workbench">
+            <aside class="panel student-rail">
+              <div class="rail-heading">
+                <h3>学员状态</h3>
+                <span id="requestCount">0 人提交</span>
+              </div>
+              <div id="studentSummary"></div>
+            </aside>
+
+            <section class="panel calendar-panel">
+              <div class="location-row" id="locationRow"></div>
+              <div class="coach-calendar" id="coachCalendar"></div>
+              <section class="holding-pool">
+                <h3>待放入</h3>
+                <div id="unassignedPool" class="pool-items"></div>
+              </section>
+            </section>
+
+            <aside class="panel detail-panel">
+              <p class="eyebrow">当前问题</p>
+              <h3 id="issueTitle">选择一个有问题的格子</h3>
+              <p id="issueText" class="problem muted">系统会在这里显示问题和建议。</p>
+              <div id="issueRecommendation"></div>
+              <button class="primary full" id="applyRecommendation" disabled>应用推荐</button>
+            </aside>
+          </section>
         </section>
+
       </section>
     </main>
 
