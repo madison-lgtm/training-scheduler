@@ -75,8 +75,38 @@
             </div>
             <section class="default-panel">
               <div id="defaultSummary"></div>
+              <section class="routine-box" id="routineSetupPanel">
+                <div>
+                  <h3>默认安排</h3>
+                  <p>先设置平常最常上的时间、内容和地点。之后每周如果照常，可以一键提交。</p>
+                </div>
+                <div class="routine-grid">
+                  <label class="field">
+                    <span>默认时间 1</span>
+                    <select id="routineOne"></select>
+                  </label>
+                  <label class="field">
+                    <span>默认内容 1</span>
+                    <select id="routineGoalOne"></select>
+                  </label>
+                  <label class="field">
+                    <span>默认时间 2</span>
+                    <select id="routineTwo"></select>
+                  </label>
+                  <label class="field">
+                    <span>默认内容 2</span>
+                    <select id="routineGoalTwo"></select>
+                  </label>
+                </div>
+                <div class="choice-row">
+                  <label class="check-pill"><input type="checkbox" name="routineLocation" value="235 Grand" />235 Grand</label>
+                  <label class="check-pill"><input type="checkbox" name="routineLocation" value="Bisby" />Bisby</label>
+                </div>
+                <button class="ghost" id="saveDefaultRoutine" type="button">保存默认安排</button>
+              </section>
               <div class="quick-actions">
                 <button class="primary" id="useDefaultWeek" type="button">这周照常</button>
+                <button class="ghost" id="editDefaultRoutine" type="button">修改默认</button>
                 <button class="ghost" id="customizeWeek" type="button">这周要改</button>
               </div>
             </section>
@@ -133,33 +163,9 @@
               <span>5</span>
               <div>
                 <h3>确认并提交</h3>
-                <p>默认偏好可以选填。本周有特殊情况也可以写备注。</p>
+                <p>本周有特殊情况可以写备注。</p>
               </div>
             </div>
-            <section class="routine-box">
-              <div>
-                <h3>默认偏好（可选）</h3>
-                <p>第一次填完后会保存下来，本周可以临时修改。本地演示模式只保存在这个浏览器里。</p>
-              </div>
-              <div class="routine-grid">
-                <label class="field">
-                  <span>默认时间 1</span>
-                  <select id="routineOne"></select>
-                </label>
-                <label class="field">
-                  <span>默认内容 1</span>
-                  <select id="routineGoalOne"></select>
-                </label>
-                <label class="field">
-                  <span>默认时间 2</span>
-                  <select id="routineTwo"></select>
-                </label>
-                <label class="field">
-                  <span>默认内容 2</span>
-                  <select id="routineGoalTwo"></select>
-                </label>
-              </div>
-            </section>
             <label class="field">
               <span>本周备注</span>
               <textarea id="studentNotes" placeholder="比如：这周出差，周三不行；训练内容希望上下肢交替。"></textarea>

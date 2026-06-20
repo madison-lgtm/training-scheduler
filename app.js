@@ -54,7 +54,10 @@ const els = {
   studentPrev: document.querySelector("#studentPrev"),
   studentNext: document.querySelector("#studentNext"),
   defaultSummary: document.querySelector("#defaultSummary"),
+  routineSetupPanel: document.querySelector("#routineSetupPanel"),
+  saveDefaultRoutine: document.querySelector("#saveDefaultRoutine"),
   useDefaultWeek: document.querySelector("#useDefaultWeek"),
+  editDefaultRoutine: document.querySelector("#editDefaultRoutine"),
   customizeWeek: document.querySelector("#customizeWeek"),
   submitRequest: document.querySelector("#submitRequest"),
   mySchedule: document.querySelector("#mySchedule"),
@@ -109,7 +112,9 @@ function bindEvents() {
   els.sessionCount.addEventListener("input", renderSessionGoals);
   els.studentPrev.addEventListener("click", () => setStudentStep(currentStudentStep - 1));
   els.studentNext.addEventListener("click", () => setStudentStep(currentStudentStep + 1));
+  els.saveDefaultRoutine.addEventListener("click", saveDefaultRoutine);
   els.useDefaultWeek.addEventListener("click", submitDefaultWeek);
+  els.editDefaultRoutine.addEventListener("click", toggleDefaultEditor);
   els.customizeWeek.addEventListener("click", startWeeklyEdit);
   els.submitRequest.addEventListener("click", submitStudentRequest);
   els.studentName.addEventListener("input", () => {
@@ -423,7 +428,9 @@ function renderDefaultSummary() {
         <span>如果之前设置过默认安排，这里会自动带出来。</span>
       </div>
     `;
+    els.routineSetupPanel.style.display = "none";
     els.useDefaultWeek.disabled = true;
+    els.editDefaultRoutine.style.display = "none";
     els.customizeWeek.textContent = "填写本周申请";
     return;
   }
@@ -432,11 +439,13 @@ function renderDefaultSummary() {
     els.defaultSummary.innerHTML = `
       <div class="default-empty">
         <strong>还没有默认安排</strong>
-        <span>先填写一次本周申请，并在最后一步设置默认偏好。之后就可以一键照常提交。</span>
+        <span>先在这里设置平常固定的时间和地点。之后每周如果照常，可以一键提交。</span>
       </div>
     `;
+    els.routineSetupPanel.style.display = "";
     els.useDefaultWeek.disabled = true;
-    els.customizeWeek.textContent = "设置本周申请";
+    els.editDefaultRoutine.style.display = "none";
+    els.customizeWeek.textContent = "临时填写本周";
     return;
   }
   const lines = routine.routine.map((item, index) => {
@@ -450,8 +459,48 @@ function renderDefaultSummary() {
       <small>地点：${routine.locations.join(" / ")}</small>
     </div>
   `;
+  els.routineSetupPanel.style.display = "none";
   els.useDefaultWeek.disabled = false;
+  els.editDefaultRoutine.style.display = "";
   els.customizeWeek.textContent = "这周要改";
+}
+
+function toggleDefaultEditor() {
+  const isOpen = els.routineSetupPanel.style.display !== "none";
+  els.routineSetupPanel.style.display = isOpen ? "none" : "";
+  els.editDefaultRoutine.textContent = isOpen ? "修改默认" : "收起默认";
+}
+
+function saveDefaultRoutine() {
+  const name = els.studentName.value.trim();
+  if (!name) {
+    els.studentMessage.textContent = "先填名字或昵称。";
+    return;
+  }
+  const routine = [
+    { slotKey: els.routineOne.value, goal: els.routineGoalOne.value },
+    { slotKey: els.routineTwo.value, goal: els.routineGoalTwo.value },
+  ].filter((item) => item.slotKey);
+  const locations = getRoutineLocations();
+  if (!routine.length) {
+    els.studentMessage.textContent = "至少选择一个默认时间。";
+    return;
+  }
+  if (!locations.length) {
+    els.studentMessage.textContent = "至少选择一个默认地点。";
+    return;
+  }
+  const requestLike = {
+    routine,
+    locations,
+    goals: routine.map((item) => item.goal || "教练安排"),
+  };
+  saveRoutine(name, requestLike);
+  applyRoutineToWeeklyForm(state.routines[name]);
+  saveState();
+  els.editDefaultRoutine.textContent = "修改默认";
+  renderDefaultSummary();
+  els.studentMessage.textContent = "默认安排已保存。";
 }
 
 function submitDefaultWeek() {
@@ -495,7 +544,11 @@ function loadRoutineForName() {
   els.routineGoalOne.value = routine.routine?.[0]?.goal || "教练安排";
   els.routineTwo.value = routine.routine?.[1]?.slotKey || "";
   els.routineGoalTwo.value = routine.routine?.[1]?.goal || "教练安排";
-  document.querySelectorAll('input[name="location"]').forEach((input) => {
+  applyRoutineToWeeklyForm(routine);
+}
+
+function applyRoutineToWeeklyForm(routine) {
+  document.querySelectorAll('input[name="location"], input[name="routineLocation"]').forEach((input) => {
     input.checked = routine.locations?.includes(input.value) || false;
   });
   if (routine.routine?.length) {
@@ -507,6 +560,10 @@ function loadRoutineForName() {
     selectedAvailability = new Set(routine.routine.map((item) => item.slotKey).filter(Boolean));
     renderAvailability();
   }
+}
+
+function getRoutineLocations() {
+  return [...document.querySelectorAll('input[name="routineLocation"]:checked')].map((input) => input.value);
 }
 
 function renderMySchedule() {
