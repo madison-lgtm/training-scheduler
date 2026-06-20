@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Training Scheduler</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Training Scheduler</p>
+          <h1>私教排课</h1>
+          <p class="sync-status local" id="syncStatus">本地演示模式</p>
+        </div>
+        <div class="top-actions">
+          <button class="ghost" id="studentMode">学员提交</button>
+          <button class="ghost" id="coachEntry">教练入口</button>
+        </div>
+      </header>
+
+      <section class="view active" id="studentView">
+        <section class="panel student-card">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Student</p>
+              <h2>本周训练申请</h2>
+            </div>
+            <span class="week-label" id="studentWeekLabel"></span>
+          </div>
+
+          <div class="form-grid">
+            <label class="field">
+              <span>名字或昵称</span>
+              <input id="studentName" placeholder="比如：苏" />
+            </label>
+            <label class="field">
+              <span>识别码（可选）</span>
+              <input id="studentCode" placeholder="比如手机号后四位" />
+            </label>
+          </div>
+
+          <section class="routine-box">
+            <div>
+              <h3>默认偏好</h3>
+              <p>第一次填完后会保存下来，本周可以临时修改。本地演示模式只保存在这个浏览器里。</p>
+            </div>
+            <div class="routine-grid">
+              <label class="field">
+                <span>默认时间 1</span>
+                <select id="routineOne"></select>
+              </label>
+              <label class="field">
+                <span>默认内容 1</span>
+                <select id="routineGoalOne"></select>
+              </label>
+              <label class="field">
+                <span>默认时间 2</span>
+                <select id="routineTwo"></select>
+              </label>
+              <label class="field">
+                <span>默认内容 2</span>
+                <select id="routineGoalTwo"></select>
+              </label>
+            </div>
+          </section>
+
+          <div class="weekly-intent">
+            <label class="field">
+              <span>本周想上几次</span>
+              <input id="sessionCount" type="number" min="1" max="6" value="1" />
+            </label>
+            <div class="intent-copy">
+              <strong>可用时间 ≠ 训练次数</strong>
+              <span>如果 8 个时间都有空，但只想上 1 节，就填 1，再勾选所有可用时间。</span>
+            </div>
+          </div>
+
+          <section>
+            <div class="mini-heading">
+              <h3>每节课想练什么</h3>
+              <span>可以选具体内容，也可以交给教练安排。</span>
+            </div>
+            <div class="session-list" id="sessionGoals"></div>
+          </section>
+
+          <section>
+            <div class="mini-heading">
+              <h3>地点偏好</h3>
+              <span>同一天教练只会在一个地点上课。</span>
+            </div>
+            <div class="choice-row">
+              <label class="check-pill"><input type="checkbox" name="location" value="235 Grand" />235 Grand</label>
+              <label class="check-pill"><input type="checkbox" name="location" value="Bisby" />Bisby</label>
+            </div>
+          </section>
+
+          <section>
+            <div class="mini-heading">
+              <h3>本周所有可用时间</h3>
+              <span>教练会从这些时间里安排最终课程。</span>
+            </div>
+            <div class="availability-grid" id="availabilityGrid"></div>
+          </section>
+
+          <label class="field">
+            <span>本周备注</span>
+            <textarea id="studentNotes" placeholder="比如：这周出差，周三不行；训练内容希望上下肢交替。"></textarea>
+          </label>
+
+          <div class="submit-row">
+            <div id="studentMessage" class="message"></div>
+            <button class="primary" id="submitRequest">提交给教练</button>
+          </div>
+        </section>
+
+        <section class="panel my-schedule">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Confirmed</p>
+              <h2>我的本周安排</h2>
+            </div>
+          </div>
+          <div id="mySchedule" class="my-schedule-list">
+            <div class="empty">输入名字后可以查看已发布给你的课程。</div>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="pinView">
+        <section class="panel pin-panel">
+          <p class="eyebrow">Coach</p>
+          <h2>输入教练 PIN</h2>
+          <p class="muted">第一版先用 PIN 保护教练工作台。默认演示 PIN：2468。</p>
+          <label class="field">
+            <span>PIN</span>
+            <input id="coachPin" type="password" inputmode="numeric" />
+          </label>
+          <div class="submit-row">
+            <div id="pinMessage" class="message"></div>
+            <button class="primary" id="unlockCoach">进入工作台</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="coachView">
+        <header class="coachbar">
+          <div>
+            <p class="eyebrow">Coach Workspace</p>
+            <h2>本周排课工作台</h2>
+            <p class="muted">先生成草案，再拖动学员微调，最后发布。</p>
+          </div>
+          <div class="top-actions">
+            <button class="ghost" id="seedDemo">填入示例</button>
+            <button class="ghost" id="generateDraft">生成草案</button>
+            <button class="primary" id="publishSchedule">发布最终安排</button>
+          </div>
+        </header>
+
+        <section class="workbench">
+          <aside class="panel student-rail">
+            <div class="rail-heading">
+              <h3>学员状态</h3>
+              <span id="requestCount">0 人提交</span>
+            </div>
+            <div id="studentSummary"></div>
+          </aside>
+
+          <section class="panel calendar-panel">
+            <div class="location-row" id="locationRow"></div>
+            <div class="coach-calendar" id="coachCalendar"></div>
+            <section class="holding-pool">
+              <h3>待放入</h3>
+              <div id="unassignedPool" class="pool-items"></div>
+            </section>
+          </section>
+
+          <aside class="panel detail-panel">
+            <p class="eyebrow">当前问题</p>
+            <h3 id="issueTitle">选择一个有问题的格子</h3>
+            <p id="issueText" class="problem muted">系统会在这里显示问题和建议。</p>
+            <div id="issueRecommendation"></div>
+            <button class="primary full" id="applyRecommendation" disabled>应用推荐</button>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <script src="./firebase-config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
