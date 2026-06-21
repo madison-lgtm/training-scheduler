@@ -131,6 +131,7 @@ const els = {
   mobileCoachDay: document.querySelector("#mobileCoachDay"),
   mobileCoachIssues: document.querySelector("#mobileCoachIssues"),
   studentSummary: document.querySelector("#studentSummary"),
+  coachNotesList: document.querySelector("#coachNotesList"),
   locationRow: document.querySelector("#locationRow"),
   coachCalendar: document.querySelector("#coachCalendar"),
   unassignedPool: document.querySelector("#unassignedPool"),
@@ -1120,6 +1121,7 @@ function renderCoach() {
   renderCoachScheduleOverview();
   renderMobileCoach();
   renderStudentSummary();
+  renderCoachNotes();
   renderLocationRow();
   renderCoachCalendar();
   renderUnassigned();
@@ -1274,6 +1276,44 @@ function renderStudentSummary() {
       </article>
     `;
   }).join("");
+}
+
+function renderCoachNotes() {
+  if (!els.coachNotesList) return;
+  const names = getKnownStudentNames();
+  if (!names.length) {
+    els.coachNotesList.innerHTML = `<div class="empty compact">有学员提交后，这里会出现可编辑笔记。</div>`;
+    return;
+  }
+  state.coachNotes = isPlainObject(state.coachNotes) ? state.coachNotes : {};
+  els.coachNotesList.innerHTML = names.map((name) => `
+    <article class="coach-note-card">
+      <label class="field">
+        <span>${name}</span>
+        <textarea data-coach-note="${escapeAttribute(name)}" placeholder="训练偏好、伤病注意、下次计划...">${escapeTextarea(state.coachNotes[name] || "")}</textarea>
+      </label>
+    </article>
+  `).join("");
+  els.coachNotesList.querySelectorAll("[data-coach-note]").forEach((textarea) => {
+    textarea.addEventListener("input", () => {
+      state.coachNotes[textarea.dataset.coachNote] = textarea.value;
+      saveState();
+    });
+  });
+}
+
+function getKnownStudentNames() {
+  const names = new Set();
+  state.requests.forEach((request) => {
+    if (request.name) names.add(request.name);
+  });
+  Object.keys(state.routines || {}).forEach((name) => {
+    if (name) names.add(name);
+  });
+  state.published.forEach((assignment) => {
+    if (assignment.name) names.add(assignment.name);
+  });
+  return [...names].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 }
 
 function renderLocationRow() {
@@ -1997,6 +2037,23 @@ function escapeIcsText(text) {
     .replace(/\n/g, "\\n");
 }
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeAttribute(text) {
+  return escapeHtml(text);
+}
+
+function escapeTextarea(text) {
+  return escapeHtml(text);
+}
+
 function allSlotKeys() {
   return DAYS.flatMap((day) => SLOTS.map((slot) => `${day.id}-${slot.id}`));
 }
@@ -2061,6 +2118,7 @@ function normalizeState(saved) {
     weeks,
     routines: saved.routines || {},
     settings: isPlainObject(saved.settings) ? saved.settings : {},
+    coachNotes: isPlainObject(saved.coachNotes) ? saved.coachNotes : {},
   };
   if (!normalized.weeks[normalized.currentWeekKey]) normalized.weeks[normalized.currentWeekKey] = createEmptyWeek();
   normalized.weeks[normalized.currentWeekKey] = normalizeWeek(normalized.weeks[normalized.currentWeekKey]);
@@ -2137,5 +2195,6 @@ function getCloudState() {
     weeks: state.weeks || {},
     routines: state.routines || {},
     settings: state.settings || {},
+    coachNotes: state.coachNotes || {},
   };
 }
