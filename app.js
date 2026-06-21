@@ -115,8 +115,10 @@ const els = {
   unlockCoach: document.querySelector("#unlockCoach"),
   coachScheduleTab: document.querySelector("#coachScheduleTab"),
   coachWorkbenchTab: document.querySelector("#coachWorkbenchTab"),
+  coachPeopleTab: document.querySelector("#coachPeopleTab"),
   coachSchedulePage: document.querySelector("#coachSchedulePage"),
   coachWorkbenchPage: document.querySelector("#coachWorkbenchPage"),
+  coachPeoplePage: document.querySelector("#coachPeoplePage"),
   coachScheduleTitle: document.querySelector("#coachScheduleTitle"),
   coachWeekContext: document.querySelector("#coachWeekContext"),
   coachScheduleOverview: document.querySelector("#coachScheduleOverview"),
@@ -188,10 +190,11 @@ function init() {
 function bindEvents() {
   on(els.prevWeek, "click", () => changeWeek(-1));
   on(els.nextWeek, "click", () => changeWeek(1));
-  on(els.thisWeek, "click", () => setWeekKey(formatDateForFile(getWeekStart(new Date()))));
+  on(els.thisWeek, "click", () => setWeekKey(getDefaultWeekKey()));
   on(els.unlockCoach, "click", unlockCoach);
   on(els.coachScheduleTab, "click", () => setCoachPage("schedule"));
   on(els.coachWorkbenchTab, "click", () => setCoachPage("workbench"));
+  on(els.coachPeopleTab, "click", () => setCoachPage("people"));
   on(els.sessionCountOptions, "click", handleSessionCountClick);
   on(els.studentPrev, "click", () => setStudentStep(currentStudentStep - 1));
   on(els.studentNext, "click", () => setStudentStep(currentStudentStep + 1));
@@ -276,8 +279,10 @@ function setCoachPage(page) {
   selectedCoachPage = page;
   els.coachScheduleTab.classList.toggle("active", page === "schedule");
   els.coachWorkbenchTab.classList.toggle("active", page === "workbench");
+  els.coachPeopleTab.classList.toggle("active", page === "people");
   els.coachSchedulePage.classList.toggle("active", page === "schedule");
   els.coachWorkbenchPage.classList.toggle("active", page === "workbench");
+  els.coachPeoplePage.classList.toggle("active", page === "people");
 }
 
 function changeWeek(offset) {
@@ -314,7 +319,7 @@ function resetStudentWeekFlow() {
 }
 
 function syncWeekPointers() {
-  if (!state.currentWeekKey) state.currentWeekKey = formatDateForFile(getWeekStart(new Date()));
+  if (!state.currentWeekKey) state.currentWeekKey = getDefaultWeekKey();
   if (!isPlainObject(state.weeks)) state.weeks = {};
   const week = ensureWeek(state.currentWeekKey);
   state.requests = week.requests;
@@ -2165,6 +2170,17 @@ function getWeekStart(date) {
   return result;
 }
 
+function getDefaultWeekStart() {
+  const today = new Date();
+  const day = today.getDay();
+  if (day === 0 || day === 5 || day === 6) return getNextTrainingWeekStart();
+  return getWeekStart(today);
+}
+
+function getDefaultWeekKey() {
+  return formatDateForFile(getDefaultWeekStart());
+}
+
 function parseDateKey(dateKey) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ""))) return getWeekStart(new Date());
   const [year, month, day] = dateKey.split("-").map(Number);
@@ -2283,7 +2299,10 @@ function makeId() {
 function loadState() {
   try {
     const saved = JSON.parse(safeLocalStorageGet(STORAGE_KEY));
-    return normalizeState(saved || {});
+    const loaded = normalizeState(saved || {});
+    loaded.currentWeekKey = getDefaultWeekKey();
+    if (!loaded.weeks[loaded.currentWeekKey]) loaded.weeks[loaded.currentWeekKey] = createEmptyWeek();
+    return normalizeState(loaded);
   } catch {
     safeLocalStorageRemove(STORAGE_KEY);
   }
@@ -2291,7 +2310,7 @@ function loadState() {
 }
 
 function normalizeState(saved) {
-  const currentWeekKey = saved.currentWeekKey || formatDateForFile(getWeekStart(new Date()));
+  const currentWeekKey = saved.currentWeekKey || getDefaultWeekKey();
   const weeks = isPlainObject(saved.weeks) ? saved.weeks : {};
   if (!weeks[currentWeekKey]) {
     weeks[currentWeekKey] = {

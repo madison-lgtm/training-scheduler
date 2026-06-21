@@ -370,14 +370,12 @@ h3 {
   box-shadow: 0 14px 34px rgba(84, 50, 66, 0.07);
 }
 
-.role-card::after {
-  content: "进入";
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
+.role-card b {
+  justify-self: end;
   min-height: 30px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   padding: 0 12px;
   border-radius: 999px;
   background: linear-gradient(120deg, #f0479d, #ff9ec9 58%, #efff68);
@@ -399,21 +397,36 @@ h3 {
   width: fit-content;
   padding: 4px 9px;
   border-radius: 999px;
-  background: var(--green-soft);
-  color: var(--green);
+  background: #ffe1f1;
+  color: var(--pink);
   font-size: 0.78rem;
   font-weight: 900;
 }
 
 .role-card strong {
-  font-size: 1.25rem;
+  font-size: clamp(1.42rem, 3.8vw, 2.05rem);
+  line-height: 1.05;
 }
 
 .role-card small {
   color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.45;
-  padding-right: 54px;
+}
+
+.role-member {
+  border-color: rgba(195, 58, 134, 0.32);
+  background: linear-gradient(135deg, #fff, #fff1f8);
+}
+
+.role-coach {
+  border-color: rgba(20, 120, 88, 0.26);
+  background: linear-gradient(135deg, #fff, #f3fff6);
+}
+
+.role-coach span {
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .role-card > * {
@@ -1070,8 +1083,7 @@ textarea {
   grid-template-columns: minmax(0, 1fr) 330px;
   grid-template-areas:
     "calendar detail"
-    "students detail"
-    "notes detail";
+    "calendar detail";
   gap: 12px;
   align-items: start;
 }
@@ -1082,6 +1094,13 @@ textarea {
 
 .coach-notes-panel {
   grid-area: notes;
+}
+
+.people-page-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.86fr) minmax(0, 1.14fr);
+  gap: 12px;
+  align-items: start;
 }
 
 .calendar-panel {
@@ -1536,18 +1555,22 @@ textarea {
   }
 
   .coach-actions {
-    width: 100%;
+    width: auto;
+    align-self: flex-end;
   }
 
   .coach-actions summary {
-    width: 100%;
+    width: auto;
+    min-width: 132px;
     justify-content: center;
   }
 
   .coach-action-menu {
-    left: 0;
-    right: auto;
-    width: 100%;
+    left: auto;
+    right: 0;
+    width: min(340px, calc(100vw - 24px));
+    max-height: min(62vh, 560px);
+    overflow: auto;
   }
 
   .location-choice-actions {
@@ -1599,7 +1622,7 @@ textarea {
 
   .coach-tabs {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   #roleView {
@@ -1610,6 +1633,10 @@ textarea {
   .role-card {
     min-height: 138px;
     padding: 16px;
+  }
+
+  .role-card strong {
+    font-size: 1.55rem;
   }
 
   .student-step-tabs {
@@ -1823,6 +1850,30 @@ textarea {
     min-height: 240px;
   }
 
+  .student-card > .submit-row {
+    position: sticky;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 9;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 14px -4px -4px;
+    padding: 10px;
+    border: 1px solid rgba(195, 58, 134, 0.18);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 -10px 30px rgba(36, 25, 31, 0.1);
+    backdrop-filter: blur(14px);
+  }
+
+  .student-card > .submit-row .message {
+    grid-column: 1 / -1;
+  }
+
+  .student-card > .submit-row button {
+    width: 100%;
+  }
+
   .coachbar {
     gap: 10px;
   }
@@ -1839,6 +1890,10 @@ textarea {
 
   .workbench {
     display: block;
+  }
+
+  .people-page-grid {
+    grid-template-columns: 1fr;
   }
 
   .calendar-panel {

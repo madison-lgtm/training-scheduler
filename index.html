@@ -37,15 +37,17 @@
             </div>
           </div>
           <div class="role-grid">
-            <button class="role-card" id="roleStudent" type="button" data-view-target="student">
-              <span>Member</span>
-              <strong>查看或提交训练安排</strong>
-              <small>先看 Dora 发布给你的课程；需要改某一周时，再提交可用时间。</small>
+            <button class="role-card role-member" id="roleStudent" type="button" data-view-target="student">
+              <span>我是学员</span>
+              <strong>学员入口</strong>
+              <small>看自己的课，提交这周或未来某周的可用时间。</small>
+              <b>进入</b>
             </button>
-            <button class="role-card" id="roleCoach" type="button" data-view-target="pin">
-              <span>Dora</span>
-              <strong>进入排课工作台</strong>
-              <small>查看整周安排、处理冲突建议，并发布最终课表。</small>
+            <button class="role-card role-coach" id="roleCoach" type="button" data-view-target="pin">
+              <span>我是 Dora</span>
+              <strong>教练入口</strong>
+              <small>输入 PIN 后查看全员申请、调整排课并发布最终课表。</small>
+              <b>进入</b>
             </button>
           </div>
         </section>
@@ -292,6 +294,7 @@
         <nav class="coach-tabs" aria-label="教练页面">
           <button class="active" id="coachScheduleTab" type="button">查看安排</button>
           <button id="coachWorkbenchTab" type="button">调整排课</button>
+          <button id="coachPeopleTab" type="button">学员资料</button>
         </nav>
 
         <section class="coach-page active" id="coachSchedulePage">
@@ -342,24 +345,6 @@
           </section>
 
           <section class="workbench">
-            <aside class="panel student-rail">
-              <div class="rail-heading">
-                <h3>学员状态</h3>
-                <span id="requestCount">0 人提交</span>
-              </div>
-              <p class="muted compact-copy">这里会显示每位会员的识别码；如果会员忘记了，可以复制后发给她。</p>
-              <div id="studentSummary"></div>
-            </aside>
-
-            <aside class="panel coach-notes-panel">
-              <div class="rail-heading">
-                <h3>复制 Apple Notes 到这里</h3>
-                <span>自动保存</span>
-              </div>
-              <p class="muted compact-copy">从 Apple Notes 复制每个学员的重点，粘贴到对应名字下面。下次排课会继续保留。</p>
-              <div id="coachNotesList"></div>
-            </aside>
-
             <section class="panel calendar-panel">
               <div class="workbench-hint">
                 <strong>手机也可以调整</strong>
@@ -390,6 +375,28 @@
           </section>
         </section>
 
+        <section class="coach-page" id="coachPeoplePage">
+          <section class="people-page-grid">
+            <aside class="panel student-rail">
+              <div class="rail-heading">
+                <h3>学员状态</h3>
+                <span id="requestCount">0 人提交</span>
+              </div>
+              <p class="muted compact-copy">这里会显示每位会员的识别码；如果会员忘记了，可以复制后发给她。</p>
+              <div id="studentSummary"></div>
+            </aside>
+
+            <aside class="panel coach-notes-panel">
+              <div class="rail-heading">
+                <h3>复制 Apple Notes 到这里</h3>
+                <span>自动保存</span>
+              </div>
+              <p class="muted compact-copy">从 Apple Notes 复制每个学员的重点，粘贴到对应名字下面。下次排课会继续保留。</p>
+              <div id="coachNotesList"></div>
+            </aside>
+          </section>
+        </section>
+
       </section>
     </main>
 
@@ -407,11 +414,12 @@
         }
 
         function setCoachPage(page) {
-          var isSchedule = page === "schedule";
-          document.getElementById("coachScheduleTab")?.classList.toggle("active", isSchedule);
-          document.getElementById("coachWorkbenchTab")?.classList.toggle("active", !isSchedule);
-          document.getElementById("coachSchedulePage")?.classList.toggle("active", isSchedule);
-          document.getElementById("coachWorkbenchPage")?.classList.toggle("active", !isSchedule);
+          document.getElementById("coachScheduleTab")?.classList.toggle("active", page === "schedule");
+          document.getElementById("coachWorkbenchTab")?.classList.toggle("active", page === "workbench");
+          document.getElementById("coachPeopleTab")?.classList.toggle("active", page === "people");
+          document.getElementById("coachSchedulePage")?.classList.toggle("active", page === "schedule");
+          document.getElementById("coachWorkbenchPage")?.classList.toggle("active", page === "workbench");
+          document.getElementById("coachPeoplePage")?.classList.toggle("active", page === "people");
         }
 
         document.addEventListener("click", function (event) {
@@ -427,6 +435,10 @@
           }
           if (event.target.closest("#coachWorkbenchTab")) {
             setCoachPage("workbench");
+            return;
+          }
+          if (event.target.closest("#coachPeopleTab")) {
+            setCoachPage("people");
           }
         });
       })();
