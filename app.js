@@ -14,7 +14,7 @@ const FLEX_GOAL = "听 Dora 安排";
 const GOALS = ["上肢", "下肢", "全身力量", "功能性", FLEX_GOAL];
 const LOCATIONS = ["235 Grand", "Bisby"];
 const STORAGE_KEY = "training-scheduler-mvp-v1";
-const COACH_PIN = "2468";
+const DEFAULT_COACH_PIN = "2468";
 const CAPACITY = 2;
 const STUDENT_STEPS = ["身份", "次数", "时间", "内容", "地点", "确认"];
 
@@ -28,11 +28,11 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("#unlockCoach")) {
     const pin = document.querySelector("#coachPin")?.value;
     const message = document.querySelector("#pinMessage");
-    if (pin === COACH_PIN) {
+    if (pin === getCoachPin()) {
       if (message) message.textContent = "";
       navigateView("coach");
     } else if (message) {
-      message.textContent = "PIN 不对。演示 PIN 是 2468。";
+      message.textContent = "PIN 不对。可以请 Dora 确认当前 PIN。";
     }
   }
 });
@@ -41,6 +41,7 @@ function navigateView(name) {
   document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
   const target = document.querySelector(`#${name === "student" ? "studentView" : name === "pin" ? "pinView" : name === "coach" ? "coachView" : "roleView"}`);
   if (target) target.classList.add("active");
+  document.body.dataset.view = name;
   if (name === "coach" && typeof renderCoach === "function") {
     try {
       renderCoach();
@@ -57,6 +58,7 @@ let lastSubmittedRequest = null;
 let currentStudentStep = 0;
 let weeklyEditMode = false;
 let dragged = null;
+let selectedMove = null;
 let currentIssue = null;
 let cloudStore = null;
 let cloudSaveTimer = null;
@@ -70,6 +72,8 @@ const els = {
   studentView: document.querySelector("#studentView"),
   pinView: document.querySelector("#pinView"),
   coachView: document.querySelector("#coachView"),
+  topActions: document.querySelector(".top-actions"),
+  coachActions: document.querySelector(".coach-actions"),
   roleStudent: document.querySelector("#roleStudent"),
   roleCoach: document.querySelector("#roleCoach"),
   prevWeek: document.querySelector("#prevWeek"),
@@ -94,8 +98,12 @@ const els = {
   studentStepTabs: document.querySelector("#studentStepTabs"),
   studentPrev: document.querySelector("#studentPrev"),
   studentNext: document.querySelector("#studentNext"),
+  defaultPanel: document.querySelector("#defaultPanel"),
   defaultSummary: document.querySelector("#defaultSummary"),
   routineSetupPanel: document.querySelector("#routineSetupPanel"),
+  routineSetupTitle: document.querySelector("#routineSetupTitle"),
+  routineSetupCopy: document.querySelector("#routineSetupCopy"),
+  weeklyQuickActions: document.querySelector("#weeklyQuickActions"),
   saveDefaultRoutine: document.querySelector("#saveDefaultRoutine"),
   useDefaultWeek: document.querySelector("#useDefaultWeek"),
   editDefaultRoutine: document.querySelector("#editDefaultRoutine"),
@@ -114,6 +122,9 @@ const els = {
   seedDemo: document.querySelector("#seedDemo"),
   generateDraft: document.querySelector("#generateDraft"),
   exportCalendar: document.querySelector("#exportCalendar"),
+  newCoachPin: document.querySelector("#newCoachPin"),
+  saveCoachPin: document.querySelector("#saveCoachPin"),
+  coachPinMessage: document.querySelector("#coachPinMessage"),
   publishSchedule: document.querySelector("#publishSchedule"),
   requestCount: document.querySelector("#requestCount"),
   mobileDayTabs: document.querySelector("#mobileDayTabs"),
@@ -126,6 +137,7 @@ const els = {
   issueTitle: document.querySelector("#issueTitle"),
   issueText: document.querySelector("#issueText"),
   issueRecommendation: document.querySelector("#issueRecommendation"),
+  detailPanel: document.querySelector(".detail-panel"),
   applyRecommendation: document.querySelector("#applyRecommendation"),
   requestPreview: document.querySelector("#requestPreview"),
 };
@@ -186,15 +198,37 @@ function bindEvents() {
     renderDefaultSummary();
     renderMySchedule();
   });
-  on(els.seedDemo, "click", seedDemo);
-  on(els.generateDraft, "click", generateDraft);
-  on(els.exportCalendar, "click", exportCalendar);
-  on(els.publishSchedule, "click", publishSchedule);
+  on(els.seedDemo, "click", () => runCoachAction(seedDemo));
+  on(els.generateDraft, "click", () => runCoachAction(generateDraft));
+  on(els.exportCalendar, "click", () => runCoachAction(exportCalendar));
+  on(els.saveCoachPin, "click", saveCoachPin);
+  on(els.publishSchedule, "click", () => runCoachAction(publishSchedule));
   on(els.applyRecommendation, "click", applyRecommendation);
 }
 
 function on(element, eventName, handler) {
   if (element) element.addEventListener(eventName, handler);
+}
+
+function runCoachAction(action) {
+  if (els.coachActions) els.coachActions.open = false;
+  action();
+}
+
+function getCoachPin() {
+  return state.settings?.coachPin || DEFAULT_COACH_PIN;
+}
+
+function saveCoachPin() {
+  const nextPin = els.newCoachPin.value.trim();
+  if (nextPin.length < 4) {
+    els.coachPinMessage.textContent = "至少 4 位，方便记也更安全。";
+    return;
+  }
+  state.settings = { ...(state.settings || {}), coachPin: nextPin };
+  els.newCoachPin.value = "";
+  els.coachPinMessage.textContent = "新 PIN 已保存。";
+  saveState();
 }
 
 function fillSelects() {
@@ -302,7 +336,8 @@ function renderWeekLabels() {
   const label = getWeekRangeLabel();
   els.currentWeekLabel.textContent = label;
   els.studentWeekLabel.textContent = label;
-  els.exportCalendar.textContent = `导出 ${label} 日历`;
+  const exportLabel = els.exportCalendar.querySelector("strong");
+  if (exportLabel) exportLabel.textContent = `导出 ${label} 日历`;
 }
 
 function renderStudentSteps() {
@@ -614,13 +649,15 @@ function renderDefaultSummary() {
   if (!els.defaultSummary) return;
   const name = els.studentName.value.trim();
   if (!name) {
+    els.defaultPanel.classList.remove("first-time", "ready");
     els.defaultSummary.innerHTML = `
       <div class="default-empty">
         <strong>先输入名字</strong>
-        <span>如果之前设置过默认安排，这里会自动带出来。</span>
+        <span>输入后，如果之前设置过默认安排，这里会自动带出来；第一次使用会先设置默认时间。</span>
       </div>
     `;
     els.routineSetupPanel.style.display = "none";
+    els.weeklyQuickActions.style.display = "none";
     els.useDefaultWeek.disabled = true;
     els.editDefaultRoutine.style.display = "none";
     els.customizeWeek.textContent = "填写本周申请";
@@ -628,18 +665,25 @@ function renderDefaultSummary() {
   }
   const routine = getSavedRoutine();
   if (!hasUsableRoutine(routine)) {
+    els.defaultPanel.classList.add("first-time");
+    els.defaultPanel.classList.remove("ready");
     els.defaultSummary.innerHTML = `
       <div class="default-empty">
-        <strong>还没有默认安排</strong>
-        <span>先在这里设置平常固定的时间和地点。之后每周如果照常，可以一键提交。</span>
+        <strong>第一次先设置默认安排</strong>
+        <span>这是你的常用上课模板。之后每周如果照常，就不用重新选时间。</span>
       </div>
     `;
+    els.routineSetupTitle.textContent = "设置你的默认上课时间";
+    els.routineSetupCopy.textContent = "选平常最常上的时间、训练内容和地点。保存后不会自动提交给 Dora，只是先记住你的默认偏好。";
     els.routineSetupPanel.style.display = "";
+    els.weeklyQuickActions.style.display = "none";
     els.useDefaultWeek.disabled = true;
     els.editDefaultRoutine.style.display = "none";
     els.customizeWeek.textContent = "临时填写本周";
     return;
   }
+  els.defaultPanel.classList.remove("first-time");
+  els.defaultPanel.classList.add("ready");
   const lines = routine.routine.map((item, index) => {
     const goal = normalizeGoal(item.goal || routine.goals?.[index]);
     return `${formatSlot(item.slotKey)} · ${goal}`;
@@ -648,10 +692,13 @@ function renderDefaultSummary() {
     <div class="default-ready">
       <span>默认安排</span>
       <strong>${lines.join("；")}</strong>
-      <small>地点：${routine.locations.join(" / ")}</small>
+      <small>地点：${routine.locations.join(" / ")}。这只是默认模板，不代表本周已经提交。</small>
     </div>
   `;
+  els.routineSetupTitle.textContent = "修改默认安排";
+  els.routineSetupCopy.textContent = "这里改的是以后常用的时间、内容和地点；不会自动提交本周申请。";
   els.routineSetupPanel.style.display = "none";
+  els.weeklyQuickActions.style.display = "";
   els.useDefaultWeek.disabled = false;
   els.editDefaultRoutine.style.display = "";
   els.customizeWeek.textContent = "这周要改";
@@ -693,7 +740,7 @@ function saveDefaultRoutine() {
   saveState();
   els.editDefaultRoutine.textContent = "修改默认";
   renderDefaultSummary();
-  els.studentMessage.textContent = "默认安排已保存。";
+  els.studentMessage.textContent = "默认安排已保存。现在可以选择这周照常，或这周要改。";
 }
 
 function submitDefaultWeek() {
@@ -825,11 +872,11 @@ function renderMySchedule() {
 }
 
 function unlockCoach() {
-  if (els.coachPin.value === COACH_PIN) {
+  if (els.coachPin.value === getCoachPin()) {
     els.pinMessage.textContent = "";
     showView("coach");
   } else {
-    els.pinMessage.textContent = "PIN 不对。演示 PIN 是 2468。";
+    els.pinMessage.textContent = "PIN 不对。可以请 Dora 确认当前 PIN。";
   }
 }
 
@@ -1076,7 +1123,7 @@ function renderCoach() {
   renderLocationRow();
   renderCoachCalendar();
   renderUnassigned();
-  renderIssue(state.draft.issues[0] || null);
+  renderIssue(state.draft.issues[0] || null, { focus: false });
 }
 
 function renderCoachScheduleOverview() {
@@ -1223,6 +1270,7 @@ function renderStudentSummary() {
         <strong>${request.name}</strong>
         <span>想上 ${request.desiredCount} · 已排 ${assigned}</span>
         <small>${request.goals.map(normalizeGoal).join(" / ")} · 可用 ${request.availability.length} 个时间</small>
+        <small>识别码：${request.code || "未填写"}</small>
       </article>
     `;
   }).join("");
@@ -1238,7 +1286,7 @@ function renderLocationRow() {
       ? votes["235 Grand"] === votes.Bisby
         ? `平票 ${votes["235 Grand"]}:${votes.Bisby}`
         : `建议 ${votes["235 Grand"] > votes.Bisby ? "235 Grand" : "Bisby"} · ${votes["235 Grand"]}:${votes.Bisby}`
-      : "暂无偏好";
+      : "待 Dora 选择";
     return `
       <label class="location-card ${dayIssue || !location ? "review" : "selected"}" data-day-card="${day.id}">
         <span>${day.label}</span>
@@ -1253,7 +1301,11 @@ function renderLocationRow() {
   }).join("");
 
   els.locationRow.querySelectorAll("[data-day-location]").forEach((select) => {
-    select.addEventListener("change", () => {
+    select.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+    select.addEventListener("change", (event) => {
+      event.stopPropagation();
       updateDayLocation(select.dataset.dayLocation, select.value);
     });
   });
@@ -1275,6 +1327,10 @@ function renderCoachCalendar() {
     slot.addEventListener("dragover", (event) => event.preventDefault());
     slot.addEventListener("drop", () => moveDraggedToSlot(slot.dataset.slotKey));
     slot.addEventListener("click", () => {
+      if (selectedMove) {
+        moveSelectedToSlot(slot.dataset.slotKey);
+        return;
+      }
       const issue = state.draft.issues.find((item) => item.slotKey === slot.dataset.slotKey);
       renderIssue(issue || null);
     });
@@ -1283,6 +1339,10 @@ function renderCoachCalendar() {
   els.coachCalendar.querySelectorAll("[draggable='true']").forEach((chip) => {
     chip.addEventListener("dragstart", () => {
       dragged = { type: "assignment", id: chip.dataset.assignmentId };
+    });
+    chip.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectMoveSource("assignment", chip.dataset.assignmentId);
     });
   });
 }
@@ -1294,7 +1354,7 @@ function renderSlot(slotKey) {
   return `
     <article class="slot ${className}" data-slot-key="${slotKey}">
       <div class="people">
-        ${assignments.map((item) => `<button class="person-chip" draggable="true" data-assignment-id="${item.id}">${item.name}</button>`).join("")}
+        ${assignments.map((item) => `<button class="person-chip ${selectedMove?.type === "assignment" && selectedMove.id === item.id ? "selected" : ""}" draggable="true" data-assignment-id="${item.id}">${item.name}</button>`).join("")}
         ${assignments.length < CAPACITY ? `<span class="drop-chip">可放入 ${CAPACITY - assignments.length} 人</span>` : ""}
       </div>
       <strong>${assignments.map((item) => item.goal).join(" / ") || "空"}</strong>
@@ -1305,35 +1365,50 @@ function renderSlot(slotKey) {
 
 function renderUnassigned() {
   if (!state.draft.unassigned.length) {
-    els.unassignedPool.innerHTML = `<span class="muted">没有待放入学员。</span>`;
+    els.unassignedPool.innerHTML = `<span class="muted">所有申请都已经排进上面的时间格。</span>`;
     return;
   }
   els.unassignedPool.innerHTML = state.draft.unassigned.map((item) => `
-    <button draggable="true" data-unassigned-id="${item.id}">${item.request.name} · ${item.goal} · 可 ${item.request.availability.map(formatSlot).join(" / ")}</button>
+    <button class="${selectedMove?.type === "unassigned" && selectedMove.id === item.id ? "selected" : ""}" draggable="true" data-unassigned-id="${item.id}">${item.request.name} · ${item.goal} · 可 ${item.request.availability.map(formatSlot).join(" / ")}</button>
   `).join("");
 
   els.unassignedPool.querySelectorAll("[draggable='true']").forEach((button) => {
     button.addEventListener("dragstart", () => {
       dragged = { type: "unassigned", id: button.dataset.unassignedId };
     });
+    button.addEventListener("click", () => {
+      selectMoveSource("unassigned", button.dataset.unassignedId);
+    });
   });
 }
 
-function renderIssue(issue) {
+function renderIssue(issue, options = { focus: true }) {
+  selectedMove = null;
   currentIssue = issue;
+  els.applyRecommendation.style.display = "";
   if (!issue) {
     els.issueTitle.textContent = "没有选中问题";
     els.issueText.textContent = "点击黄色或红色格子查看建议。";
     els.issueRecommendation.innerHTML = "";
     els.applyRecommendation.disabled = true;
+    focusIssuePanel(false, false);
     return;
   }
   els.issueTitle.textContent = issue.title;
   els.issueText.textContent = issue.text;
   const recommendation = buildRecommendation(issue);
+  if (issue.type === "location-choice" || issue.type === "location-preference") {
+    els.issueRecommendation.innerHTML = renderLocationChoiceAdvice(issue);
+    els.applyRecommendation.disabled = true;
+    els.applyRecommendation.style.display = "none";
+    bindLocationChoiceButtons();
+    focusIssuePanel(Boolean(options.focus), Boolean(options.focus));
+    return;
+  }
   if (issue.type === "ask-availability") {
     els.issueRecommendation.innerHTML = renderAskAvailabilityAdvice(issue);
     els.applyRecommendation.disabled = true;
+    focusIssuePanel(Boolean(options.focus), Boolean(options.focus));
     return;
   }
   els.issueRecommendation.innerHTML = recommendation ? `
@@ -1344,6 +1419,35 @@ function renderIssue(issue) {
     </div>
   ` : renderManualPlanAdvice(issue);
   els.applyRecommendation.disabled = !recommendation;
+  focusIssuePanel(Boolean(options.focus), Boolean(options.focus));
+}
+
+function renderLocationChoiceAdvice(issue) {
+  const day = DAYS.find((item) => item.id === issue.dayId);
+  const votes = countLocationVotes(issue.dayId, state.requests);
+  const current = state.draft.dayLocations[issue.dayId] || "";
+  const voteText = `偏好票数：235 Grand ${votes["235 Grand"] || 0}，Bisby ${votes.Bisby || 0}`;
+  return `
+    <div class="recommend-box location-choice-box">
+      <strong>${day?.label || "当天"}地点由 Dora 决定</strong>
+      <p>${voteText}。选定后，这一天两节课都会使用同一个地点。</p>
+      <div class="location-choice-actions">
+        ${LOCATIONS.map((location) => `
+          <button class="${current === location ? "primary" : "ghost"}" type="button" data-set-day-location="${issue.dayId}" data-location="${location}">
+            设为 ${location}
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function bindLocationChoiceButtons() {
+  els.issueRecommendation.querySelectorAll("[data-set-day-location]").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateDayLocation(button.dataset.setDayLocation, button.dataset.location);
+    });
+  });
 }
 
 function renderAskAvailabilityAdvice(issue) {
@@ -1612,6 +1716,47 @@ function describePeopleWithGoals(items) {
   return items.map((assigned) => `${assigned.name}（${normalizeGoal(assigned.goal)}）`).join("、");
 }
 
+function selectMoveSource(type, id) {
+  selectedMove = { type, id };
+  dragged = { type, id };
+  const label = getMoveSourceLabel(selectedMove);
+  currentIssue = null;
+  els.issueTitle.textContent = `已选中 ${label}`;
+  els.issueText.textContent = "现在点一个目标时间格，就会把这个学员移动过去。手机上不用拖拽，点选就可以。";
+  els.issueRecommendation.innerHTML = `<div class="recommend-box"><strong>移动方式</strong><p>点任意一个有空位的时间格；如果目标时间不在学员可用范围，系统会提示需要先私下确认。</p></div>`;
+  els.applyRecommendation.disabled = true;
+  renderCoachCalendar();
+  renderUnassigned();
+  focusIssuePanel(false);
+}
+
+function getMoveSourceLabel(source) {
+  if (!source) return "学员";
+  if (source.type === "assignment") {
+    const assignment = state.draft.assignments.find((item) => item.id === source.id);
+    return assignment ? `${assignment.name}（${normalizeGoal(assignment.goal)}）` : "学员";
+  }
+  const item = state.draft.unassigned.find((entry) => entry.id === source.id);
+  return item ? `${item.request.name}（${normalizeGoal(item.goal)}）` : "学员";
+}
+
+function moveSelectedToSlot(slotKey) {
+  dragged = selectedMove;
+  moveDraggedToSlot(slotKey);
+}
+
+function focusIssuePanel(shouldScroll, shouldHighlight = true) {
+  if (!els.detailPanel) return;
+  els.detailPanel.classList.remove("is-focused");
+  if (!shouldHighlight) return;
+  window.requestAnimationFrame(() => {
+    els.detailPanel.classList.add("is-focused");
+    if (shouldScroll && window.matchMedia("(max-width: 1160px)").matches) {
+      els.detailPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+}
+
 function applyRecommendation() {
   const recommendation = buildRecommendation(currentIssue);
   if (!recommendation) return;
@@ -1625,14 +1770,36 @@ function applyRecommendation() {
 
 function moveDraggedToSlot(slotKey) {
   if (!dragged) return;
+  if (dragged.type === "assignment") {
+    const currentAssignment = state.draft.assignments.find((item) => item.id === dragged.id);
+    if (currentAssignment?.slotKey === slotKey) {
+      dragged = null;
+      selectedMove = null;
+      renderCoachCalendar();
+      renderUnassigned();
+      return;
+    }
+  }
   const currentCount = state.draft.assignments.filter((item) => item.slotKey === slotKey).length;
-  if (currentCount >= CAPACITY) return;
+  if (currentCount >= CAPACITY) {
+    renderIssue({
+      type: "capacity",
+      title: "这个时间已经满了",
+      text: `${formatSlot(slotKey)} 已经有 2 位学员，不能再直接放入。`,
+      severity: "error",
+      slotKey,
+    });
+    dragged = null;
+    selectedMove = null;
+    return;
+  }
   if (dragged.type === "assignment") {
     const assignment = state.draft.assignments.find((item) => item.id === dragged.id);
     const blockIssue = assignment ? buildMoveBlockIssue(assignment, slotKey) : null;
     if (blockIssue) {
       renderIssue(blockIssue);
       dragged = null;
+      selectedMove = null;
       return;
     }
     if (assignment) {
@@ -1660,6 +1827,7 @@ function moveDraggedToSlot(slotKey) {
         }, slotKey),
       });
       dragged = null;
+      selectedMove = null;
       return;
     }
     if (item && item.request.availability.includes(slotKey)) {
@@ -1675,6 +1843,7 @@ function moveDraggedToSlot(slotKey) {
     }
   }
   dragged = null;
+  selectedMove = null;
   state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
   saveState();
   renderCoach();
@@ -1891,6 +2060,7 @@ function normalizeState(saved) {
     currentWeekKey,
     weeks,
     routines: saved.routines || {},
+    settings: isPlainObject(saved.settings) ? saved.settings : {},
   };
   if (!normalized.weeks[normalized.currentWeekKey]) normalized.weeks[normalized.currentWeekKey] = createEmptyWeek();
   normalized.weeks[normalized.currentWeekKey] = normalizeWeek(normalized.weeks[normalized.currentWeekKey]);
@@ -1966,5 +2136,6 @@ function getCloudState() {
   return {
     weeks: state.weeks || {},
     routines: state.routines || {},
+    settings: state.settings || {},
   };
 }

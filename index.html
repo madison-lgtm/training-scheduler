@@ -6,7 +6,7 @@
     <title>Dora Training</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body data-view="role">
     <main class="app">
       <header class="topbar">
         <div>
@@ -20,7 +20,7 @@
             <button class="ghost" id="thisWeek" type="button">回到本周</button>
           </div>
         </div>
-        <div class="top-actions">
+        <div class="top-actions role-actions">
           <button class="ghost" id="studentMode" data-view-target="student">Member入口</button>
           <button class="ghost" id="coachEntry" data-view-target="pin">教练入口</button>
         </div>
@@ -30,8 +30,9 @@
         <section class="panel role-panel">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Welcome</p>
-              <h2>今天想进入哪一边？</h2>
+              <p class="eyebrow">Entrance</p>
+              <h2>请选择入口</h2>
+              <p class="muted">Member 进入自己的训练周；Dora 进入教练工作台。</p>
             </div>
           </div>
           <div class="role-grid">
@@ -77,8 +78,8 @@
             <div class="step-heading">
               <span>1</span>
               <div>
-                <h3>先告诉教练你是谁</h3>
-                <p>之后教练发布安排，你也用这个名字查看自己的课。</p>
+                <h3>先建立你的默认安排</h3>
+                <p>第一次使用先设置常用时间；之后每周如果照常，就可以一键提交。</p>
               </div>
             </div>
             <div class="form-grid">
@@ -92,12 +93,12 @@
                 <small>用来确认是你本人，之后查课和修改申请时输入同一个编号就行。</small>
               </label>
             </div>
-            <section class="default-panel">
+            <section class="default-panel" id="defaultPanel">
               <div id="defaultSummary"></div>
               <section class="routine-box" id="routineSetupPanel">
                 <div>
-                  <h3>默认安排</h3>
-                  <p>默认安排只需要设置一次。保存后，每周如果照常，再点下面的「这周照常」提交给 Dora。</p>
+                  <h3 id="routineSetupTitle">第一次先设置默认安排</h3>
+                  <p id="routineSetupCopy">选你平常最常上的时间、内容和地点。保存后，以后每周如果照常就可以一键提交。</p>
                 </div>
                 <div class="routine-section">
                   <span>平常固定时间</span>
@@ -128,11 +129,11 @@
                   </div>
                 </div>
                 <div class="routine-save-row">
-                  <button class="ghost" id="saveDefaultRoutine" type="button">保存默认安排</button>
-                  <small>保存默认不会提交本周申请。</small>
+                  <button class="primary" id="saveDefaultRoutine" type="button">保存默认安排</button>
+                  <small>保存默认不会提交本周申请；保存后再选择这周是否照常。</small>
                 </div>
               </section>
-              <div class="quick-actions">
+              <div class="quick-actions" id="weeklyQuickActions">
                 <button class="primary" id="useDefaultWeek" type="button">这周照常</button>
                 <button class="ghost" id="editDefaultRoutine" type="button">修改默认</button>
                 <button class="ghost" id="customizeWeek" type="button">这周要改</button>
@@ -230,7 +231,7 @@
         <section class="panel pin-panel">
           <p class="eyebrow">Dora Studio</p>
           <h2>输入 Dora PIN</h2>
-          <p class="muted">第一版先用 PIN 保护工作台。默认演示 PIN：2468。</p>
+          <p class="muted">初始 PIN 是 2468。进入后可以在「操作」里修改。</p>
           <label class="field">
             <span>PIN</span>
             <input id="coachPin" type="password" inputmode="numeric" />
@@ -249,12 +250,37 @@
             <h2>训练周工作台</h2>
             <p class="muted">先查看已有安排，需要修改时再进入操作台。</p>
           </div>
-          <div class="top-actions">
-            <button class="ghost" id="seedDemo">填入示例</button>
-            <button class="ghost" id="generateDraft">生成草案</button>
-            <button class="ghost" id="exportCalendar">导出当前周日历</button>
-            <button class="primary" id="publishSchedule">发布最终安排</button>
-          </div>
+          <details class="coach-actions">
+            <summary>操作</summary>
+            <div class="coach-action-menu">
+              <button class="ghost" id="seedDemo" type="button">
+                <strong>填入示例</strong>
+                <span>快速放入一组测试数据</span>
+              </button>
+              <button class="ghost" id="generateDraft" type="button">
+                <strong>生成草案</strong>
+                <span>根据本周申请自动排一版</span>
+              </button>
+              <button class="ghost" id="exportCalendar" type="button">
+                <strong>导出当前周日历</strong>
+                <span>下载这一周的日历文件</span>
+              </button>
+              <div class="pin-setting">
+                <label class="field">
+                  <span>修改 Dora PIN</span>
+                  <input id="newCoachPin" type="password" inputmode="numeric" placeholder="输入新的 PIN" />
+                </label>
+                <button class="ghost" id="saveCoachPin" type="button">
+                  <strong>保存新 PIN</strong>
+                  <span id="coachPinMessage">默认 PIN 是 2468</span>
+                </button>
+              </div>
+              <button class="primary" id="publishSchedule" type="button">
+                <strong>发布最终安排</strong>
+                <span>让学员看到确认后的课表</span>
+              </button>
+            </div>
+          </details>
         </header>
 
         <nav class="coach-tabs" aria-label="教练页面">
@@ -308,10 +334,15 @@
             </aside>
 
             <section class="panel calendar-panel">
+              <div class="status-legend" aria-label="排课状态说明">
+                <span><i class="legend-dot review"></i>待确认</span>
+                <span><i class="legend-dot error"></i>需修正</span>
+                <span><i class="legend-dot selected"></i>已选地点</span>
+              </div>
               <div class="location-row" id="locationRow"></div>
               <div class="coach-calendar" id="coachCalendar"></div>
               <section class="holding-pool">
-                <h3>待放入</h3>
+                <h3>还没排进课表</h3>
                 <div id="unassignedPool" class="pool-items"></div>
               </section>
             </section>
@@ -339,6 +370,7 @@
           var viewId = name === "student" ? "studentView" : name === "pin" ? "pinView" : name === "coach" ? "coachView" : "roleView";
           var target = document.getElementById(viewId);
           if (target) target.classList.add("active");
+          document.body.dataset.view = name;
         }
 
         function setCoachPage(page) {
@@ -354,17 +386,6 @@
           if (trigger) {
             event.preventDefault();
             openView(trigger.dataset.viewTarget);
-            return;
-          }
-          if (event.target.closest("#unlockCoach")) {
-            var pin = document.getElementById("coachPin")?.value;
-            var message = document.getElementById("pinMessage");
-            if (pin === "2468") {
-              if (message) message.textContent = "";
-              openView("coach");
-            } else if (message) {
-              message.textContent = "PIN 不对。演示 PIN 是 2468。";
-            }
             return;
           }
           if (event.target.closest("#coachScheduleTab")) {
