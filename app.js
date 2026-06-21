@@ -72,7 +72,6 @@ const els = {
   studentView: document.querySelector("#studentView"),
   pinView: document.querySelector("#pinView"),
   coachView: document.querySelector("#coachView"),
-  topActions: document.querySelector(".top-actions"),
   coachActions: document.querySelector(".coach-actions"),
   roleStudent: document.querySelector("#roleStudent"),
   roleCoach: document.querySelector("#roleCoach"),
@@ -81,8 +80,7 @@ const els = {
   thisWeek: document.querySelector("#thisWeek"),
   currentWeekLabel: document.querySelector("#currentWeekLabel"),
   studentWeekLabel: document.querySelector("#studentWeekLabel"),
-  studentMode: document.querySelector("#studentMode"),
-  coachEntry: document.querySelector("#coachEntry"),
+  studentWeekContext: document.querySelector("#studentWeekContext"),
   studentName: document.querySelector("#studentName"),
   studentCode: document.querySelector("#studentCode"),
   routineOne: document.querySelector("#routineOne"),
@@ -95,6 +93,7 @@ const els = {
   availabilityGrid: document.querySelector("#availabilityGrid"),
   studentNotes: document.querySelector("#studentNotes"),
   studentMessage: document.querySelector("#studentMessage"),
+  studentProgressCard: document.querySelector("#studentProgressCard"),
   studentStepTabs: document.querySelector("#studentStepTabs"),
   studentPrev: document.querySelector("#studentPrev"),
   studentNext: document.querySelector("#studentNext"),
@@ -109,6 +108,7 @@ const els = {
   editDefaultRoutine: document.querySelector("#editDefaultRoutine"),
   customizeWeek: document.querySelector("#customizeWeek"),
   submitRequest: document.querySelector("#submitRequest"),
+  myScheduleTitle: document.querySelector("#myScheduleTitle"),
   mySchedule: document.querySelector("#mySchedule"),
   coachPin: document.querySelector("#coachPin"),
   pinMessage: document.querySelector("#pinMessage"),
@@ -118,9 +118,12 @@ const els = {
   coachSchedulePage: document.querySelector("#coachSchedulePage"),
   coachWorkbenchPage: document.querySelector("#coachWorkbenchPage"),
   coachScheduleTitle: document.querySelector("#coachScheduleTitle"),
+  coachWeekContext: document.querySelector("#coachWeekContext"),
   coachScheduleOverview: document.querySelector("#coachScheduleOverview"),
   seedDemo: document.querySelector("#seedDemo"),
+  seedDemoCopy: document.querySelector("#seedDemoCopy"),
   generateDraft: document.querySelector("#generateDraft"),
+  generateDraftCopy: document.querySelector("#generateDraftCopy"),
   exportCalendar: document.querySelector("#exportCalendar"),
   newCoachPin: document.querySelector("#newCoachPin"),
   saveCoachPin: document.querySelector("#saveCoachPin"),
@@ -129,6 +132,7 @@ const els = {
   requestCount: document.querySelector("#requestCount"),
   mobileDayTabs: document.querySelector("#mobileDayTabs"),
   mobileCoachDay: document.querySelector("#mobileCoachDay"),
+  mobileUnassignedPool: document.querySelector("#mobileUnassignedPool"),
   mobileCoachIssues: document.querySelector("#mobileCoachIssues"),
   studentSummary: document.querySelector("#studentSummary"),
   coachNotesList: document.querySelector("#coachNotesList"),
@@ -136,6 +140,7 @@ const els = {
   coachCalendar: document.querySelector("#coachCalendar"),
   unassignedPool: document.querySelector("#unassignedPool"),
   issueTitle: document.querySelector("#issueTitle"),
+  issueState: document.querySelector("#issueState"),
   issueText: document.querySelector("#issueText"),
   issueRecommendation: document.querySelector("#issueRecommendation"),
   detailPanel: document.querySelector(".detail-panel"),
@@ -159,7 +164,8 @@ function bootApp() {
       console.error(retryError);
       const status = document.querySelector("#syncStatus");
       if (status) {
-        status.textContent = `本地草稿需要修：${String(retryError?.message || retryError).slice(0, 36)}`;
+        status.textContent = "本地数据需要刷新一下；如果页面不动，请重新打开。";
+        status.title = String(retryError?.message || retryError);
         status.className = "sync-status error";
       }
     }
@@ -195,6 +201,11 @@ function bindEvents() {
   on(els.customizeWeek, "click", startWeeklyEdit);
   on(els.submitRequest, "click", submitStudentRequest);
   on(els.studentName, "input", () => {
+    loadRoutineForName();
+    renderDefaultSummary();
+    renderMySchedule();
+  });
+  on(els.studentCode, "input", () => {
     loadRoutineForName();
     renderDefaultSummary();
     renderMySchedule();
@@ -279,6 +290,7 @@ function setWeekKey(weekKey) {
   persistCurrentWeekRefs();
   state.currentWeekKey = weekKey;
   syncWeekPointers();
+  resetStudentWeekFlow();
   selectedAvailability = new Set();
   selectedGoals = new Set([FLEX_GOAL]);
   fillSelects();
@@ -287,9 +299,18 @@ function setWeekKey(weekKey) {
   renderSessionGoals();
   renderAvailability();
   renderDefaultSummary();
+  renderStudentSteps();
   renderMySchedule();
   if (els.coachView.classList.contains("active")) renderCoach();
   saveState();
+}
+
+function resetStudentWeekFlow() {
+  lastSubmittedRequest = null;
+  weeklyEditMode = false;
+  currentStudentStep = 0;
+  if (els.studentNotes) els.studentNotes.value = "";
+  if (els.studentMessage) els.studentMessage.textContent = "";
 }
 
 function syncWeekPointers() {
@@ -335,15 +356,28 @@ function normalizeWeek(week = {}) {
 
 function renderWeekLabels() {
   const label = getWeekRangeLabel();
-  els.currentWeekLabel.textContent = label;
-  els.studentWeekLabel.textContent = label;
-  const exportLabel = els.exportCalendar.querySelector("strong");
+  if (els.currentWeekLabel) els.currentWeekLabel.textContent = label;
+  if (els.studentWeekLabel) els.studentWeekLabel.textContent = label;
+  if (els.myScheduleTitle) els.myScheduleTitle.textContent = `我的安排 · ${label}`;
+  if (els.studentWeekContext) {
+    els.studentWeekContext.innerHTML = `
+      <strong>正在填写：${label}</strong>
+      <span>想提前改未来某一周，先用上方左右箭头切换日期，再提交这一周的申请。</span>
+    `;
+  }
+  if (els.coachWeekContext) {
+    els.coachWeekContext.textContent = `当前工作周：${label}`;
+  }
+  if (els.seedDemoCopy) els.seedDemoCopy.textContent = `把测试数据放进 ${label}`;
+  if (els.generateDraftCopy) els.generateDraftCopy.textContent = `根据 ${label} 的申请自动排一版`;
+  const exportLabel = els.exportCalendar?.querySelector("strong");
   if (exportLabel) exportLabel.textContent = `导出 ${label} 日历`;
 }
 
 function renderStudentSteps() {
   if (!els.studentStepTabs) return;
   if (!weeklyEditMode) {
+    if (els.studentProgressCard) els.studentProgressCard.style.display = "none";
     els.studentStepTabs.style.display = "none";
     document.querySelectorAll(".student-step").forEach((step) => {
       step.classList.toggle("active", Number(step.dataset.step) === 0);
@@ -352,6 +386,18 @@ function renderStudentSteps() {
     els.studentNext.style.display = "none";
     els.submitRequest.style.display = "none";
     return;
+  }
+  if (els.studentProgressCard) {
+    const label = STUDENT_STEPS[currentStudentStep];
+    const helper = getStudentStepHelper(currentStudentStep);
+    els.studentProgressCard.style.display = lastSubmittedRequest ? "none" : "";
+    if (!lastSubmittedRequest) {
+      els.studentProgressCard.innerHTML = `
+        <span>第 ${currentStudentStep + 1}/${STUDENT_STEPS.length} 步</span>
+        <strong>${label}</strong>
+        <small>${helper}</small>
+      `;
+    }
   }
   els.studentStepTabs.style.display = "";
   els.studentStepTabs.innerHTML = STUDENT_STEPS.map((label, index) => `
@@ -369,6 +415,15 @@ function renderStudentSteps() {
   els.studentNext.style.display = currentStudentStep === STUDENT_STEPS.length - 1 || lastSubmittedRequest ? "none" : "";
   els.submitRequest.style.display = currentStudentStep === STUDENT_STEPS.length - 1 && !lastSubmittedRequest ? "" : "none";
   renderRequestPreview();
+}
+
+function getStudentStepHelper(step) {
+  if (step === 1) return "先决定这个日期范围想上几节课。";
+  if (step === 2) return "多点几个可选时间，Dora 会更好安排。";
+  if (step === 3) return "只选想覆盖的训练重点，顺序可以交给 Dora。";
+  if (step === 4) return "地点是偏好，不是最终确认地点。";
+  if (step === 5) return "确认无误后提交给 Dora。";
+  return "先确认名字和默认安排。";
 }
 
 function setStudentStep(step) {
@@ -513,7 +568,7 @@ function renderSessionGoals() {
   renderSessionCountOptions();
   els.sessionGoals.innerHTML = `
     <div class="goal-picker-copy">
-      <strong>这周想上 ${count} 节</strong>
+      <strong>选中周想上 ${count} 节</strong>
       <span>最多选 ${count} 个重点。顺序不用定；Dora 会按拼课和恢复情况安排。</span>
     </div>
     <div class="goal-options">
@@ -558,10 +613,13 @@ function renderAvailability() {
     ${DAYS.map((day, index) => `<div class="head">${day.label}<br><span>${formatMonthDay(getDayDate(index))}</span></div>`).join("")}
     ${SLOTS.map((slot) => `
       <div class="time">${slot.label}<br><span>${slot.detail}</span></div>
-      ${DAYS.map((day) => {
+      ${DAYS.map((day, dayIndex) => {
         const key = `${day.id}-${slot.id}`;
         return `<button class="slot-toggle ${selectedAvailability.has(key) ? "selected" : ""}" data-availability="${key}">
-          ${selectedAvailability.has(key) ? "已勾选" : "可选"}
+          <small>${day.label} ${formatMonthDay(getDayDate(dayIndex))}</small>
+          <strong>${slot.label}</strong>
+          <span>${slot.detail}</span>
+          <em>${selectedAvailability.has(key) ? "已勾选" : "可选"}</em>
         </button>`;
       }).join("")}
     `).join("")}
@@ -625,12 +683,16 @@ function submitStudentRequest() {
   currentStudentStep = STUDENT_STEPS.length - 1;
   renderStudentSteps();
   renderDefaultSummary();
-  els.studentMessage.textContent = "";
+  els.studentMessage.textContent = "已提交给 Dora。需要修改的话，点上面的「返回修改这次申请」。";
   renderMySchedule();
+  focusStudentSubmission();
 }
 
 function saveRoutine(name, request) {
-  state.routines[name] = {
+  const key = getRoutineKey(name, request.code || els.studentCode.value.trim());
+  state.routines[key] = {
+    studentName: name,
+    code: request.code || els.studentCode.value.trim(),
     routine: request.routine,
     locations: request.locations,
     goals: request.goals,
@@ -639,7 +701,19 @@ function saveRoutine(name, request) {
 }
 
 function getSavedRoutine() {
-  return state.routines[els.studentName.value.trim()] || null;
+  const name = els.studentName.value.trim();
+  const code = els.studentCode.value.trim();
+  return state.routines[getRoutineKey(name, code)] || state.routines[name] || null;
+}
+
+function getRoutineKey(name, code) {
+  const cleanName = (name || "").trim();
+  const cleanCode = (code || "").trim();
+  return cleanCode ? `${cleanName}::${cleanCode}` : cleanName;
+}
+
+function getNameFromRoutineKey(key, routine) {
+  return routine?.studentName || String(key).split("::")[0];
 }
 
 function hasUsableRoutine(routine) {
@@ -661,7 +735,7 @@ function renderDefaultSummary() {
     els.weeklyQuickActions.style.display = "none";
     els.useDefaultWeek.disabled = true;
     els.editDefaultRoutine.style.display = "none";
-    els.customizeWeek.textContent = "填写本周申请";
+    els.customizeWeek.textContent = "填写这一周申请";
     return;
   }
   const routine = getSavedRoutine();
@@ -680,7 +754,7 @@ function renderDefaultSummary() {
     els.weeklyQuickActions.style.display = "none";
     els.useDefaultWeek.disabled = true;
     els.editDefaultRoutine.style.display = "none";
-    els.customizeWeek.textContent = "临时填写本周";
+    els.customizeWeek.textContent = "先不用默认，临时填写这一周";
     return;
   }
   els.defaultPanel.classList.remove("first-time");
@@ -691,24 +765,26 @@ function renderDefaultSummary() {
   });
   els.defaultSummary.innerHTML = `
     <div class="default-ready">
-      <span>默认安排</span>
+      <span>你的默认模板</span>
       <strong>${lines.join("；")}</strong>
-      <small>地点：${routine.locations.join(" / ")}。这只是默认模板，不代表本周已经提交。</small>
+      <small>地点：${routine.locations.join(" / ")}。如果 ${formatWeekRange(currentWeekKey)} 照常，直接点下面的「照默认提交这一周」。</small>
     </div>
   `;
   els.routineSetupTitle.textContent = "修改默认安排";
-  els.routineSetupCopy.textContent = "这里改的是以后常用的时间、内容和地点；不会自动提交本周申请。";
+  els.routineSetupCopy.textContent = "这里改的是以后常用的时间、内容和地点；不会自动提交选中周申请。";
   els.routineSetupPanel.style.display = "none";
   els.weeklyQuickActions.style.display = "";
   els.useDefaultWeek.disabled = false;
   els.editDefaultRoutine.style.display = "";
-  els.customizeWeek.textContent = "这周要改";
+  els.useDefaultWeek.textContent = "照默认提交这一周";
+  els.editDefaultRoutine.textContent = "修改默认模板";
+  els.customizeWeek.textContent = "这周临时改";
 }
 
 function toggleDefaultEditor() {
   const isOpen = els.routineSetupPanel.style.display !== "none";
   els.routineSetupPanel.style.display = isOpen ? "none" : "";
-  els.editDefaultRoutine.textContent = isOpen ? "修改默认" : "完成修改默认";
+  els.editDefaultRoutine.textContent = isOpen ? "修改默认模板" : "收起默认编辑";
 }
 
 function saveDefaultRoutine() {
@@ -731,17 +807,18 @@ function saveDefaultRoutine() {
     return;
   }
   const requestLike = {
+    code: els.studentCode.value.trim(),
     routine,
     locations,
     goals: routine.map((item) => normalizeGoal(item.goal)),
     goalPreferences: routine.map((item) => normalizeGoal(item.goal)),
   };
   saveRoutine(name, requestLike);
-  applyRoutineToWeeklyForm(state.routines[name]);
+  applyRoutineToWeeklyForm(getSavedRoutine());
   saveState();
-  els.editDefaultRoutine.textContent = "修改默认";
+  els.editDefaultRoutine.textContent = "修改默认模板";
   renderDefaultSummary();
-  els.studentMessage.textContent = "默认安排已保存。现在可以选择这周照常，或这周要改。";
+  els.studentMessage.textContent = "默认模板已保存。现在可以照默认提交这一周，或临时改这一周。";
 }
 
 function submitDefaultWeek() {
@@ -752,7 +829,7 @@ function submitDefaultWeek() {
   }
   const routine = getSavedRoutine();
   if (!hasUsableRoutine(routine)) {
-    els.studentMessage.textContent = "还没有默认安排，先填写一次本周申请。";
+    els.studentMessage.textContent = "还没有默认安排，先填写一次选中周申请。";
     startWeeklyEdit();
     return;
   }
@@ -765,7 +842,7 @@ function submitDefaultWeek() {
     goalPreferences: (routine.goalPreferences || routine.goals || [FLEX_GOAL]).map(normalizeGoal),
     locations: routine.locations,
     availability: routine.routine.map((item) => item.slotKey),
-    notes: "本周照常。",
+    notes: `${getWeekRangeLabel()} 照常。`,
     routine: routine.routine,
     submittedAt: new Date().toISOString(),
   };
@@ -777,8 +854,9 @@ function submitDefaultWeek() {
   currentStudentStep = STUDENT_STEPS.length - 1;
   renderStudentSteps();
   renderDefaultSummary();
-  els.studentMessage.textContent = "";
+  els.studentMessage.textContent = "已按默认模板提交给 Dora。需要修改的话，点上面的「返回修改这次申请」。";
   renderMySchedule();
+  focusStudentSubmission();
 }
 
 function loadRoutineForName() {
@@ -819,22 +897,30 @@ function renderRequestPreview() {
   if (!els.requestPreview) return;
   const request = lastSubmittedRequest || buildDraftRequestPreview();
   const submitted = Boolean(lastSubmittedRequest);
+  const weekLabel = getWeekRangeLabel();
   els.requestPreview.innerHTML = `
     <div class="submission-summary ${submitted ? "submitted" : ""}">
       ${submitted ? `<div class="success-mark">✓</div>` : ""}
-      <span>${submitted ? "提交成功" : "提交前确认"}</span>
+      <span>${submitted ? "已送达 Dora" : "提交前确认"}</span>
       <strong>${request.name || "还没填名字"} · 想上 ${request.desiredCount} 节</strong>
-      ${submitted ? `<h3>已经把这周申请送给 Dora 了</h3><p class="success-copy">Dora 排好最终课表后，你回到这里输入同一个名字就能查看。</p>` : ""}
+      ${submitted ? `<h3>${weekLabel} 的申请已经提交</h3><p class="success-copy">你不用再点一次提交。Dora 排好最终课表后，回到这里输入同一个名字和识别码，就能查看这个日期范围的课程。</p>` : `<p class="success-copy">确认你正在提交 ${weekLabel} 的申请。</p>`}
       <p>时间：${request.availability.length ? request.availability.map(formatSlot).join(" / ") : "还没选择"}</p>
       <p>内容：${request.goals.map(normalizeGoal).join(" / ")}</p>
       <p>地点：${request.locations.length ? request.locations.join(" / ") : "还没选择"}</p>
-      ${submitted ? `<button class="ghost" type="button" data-edit-submission>需要更改</button>` : ""}
+      ${submitted ? `<button class="ghost" type="button" data-edit-submission>返回修改这次申请</button>` : ""}
     </div>
   `;
   on(els.requestPreview.querySelector("[data-edit-submission]"), "click", () => {
     lastSubmittedRequest = null;
     weeklyEditMode = true;
     setStudentStep(1);
+  });
+}
+
+function focusStudentSubmission() {
+  if (!els.requestPreview) return;
+  window.requestAnimationFrame(() => {
+    els.requestPreview.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 }
 
@@ -855,13 +941,15 @@ function getRoutineLocations() {
 
 function renderMySchedule() {
   const name = els.studentName.value.trim();
+  const code = els.studentCode.value.trim();
+  const weekLabel = getWeekRangeLabel();
   if (!name) {
-    els.mySchedule.innerHTML = `<div class="empty">输入名字后可以查看已发布给你的课程。</div>`;
+    els.mySchedule.innerHTML = `<div class="empty">输入名字后可以查看 ${weekLabel} 已发布给你的课程。</div>`;
     return;
   }
-  const assignments = state.published.filter((item) => item.name === name);
+  const assignments = state.published.filter((item) => assignmentMatchesStudent(item, name, code));
   if (!assignments.length) {
-    els.mySchedule.innerHTML = `<div class="empty">目前还没有发布给你的课程。</div>`;
+    els.mySchedule.innerHTML = `<div class="empty">${weekLabel} 目前还没有发布给这个名字${code ? "和识别码" : ""}的课程。</div>`;
     return;
   }
   els.mySchedule.innerHTML = assignments.map((item) => `
@@ -870,6 +958,13 @@ function renderMySchedule() {
       <span>${item.goal} · ${item.location}</span>
     </article>
   `).join("");
+}
+
+function assignmentMatchesStudent(assignment, name, code) {
+  if (assignment.name !== name) return false;
+  if (!code) return true;
+  const assignmentCode = assignment.code || state.requests.find((request) => request.id === assignment.requestId)?.code || "";
+  return assignmentCode === code;
 }
 
 function unlockCoach() {
@@ -882,6 +977,10 @@ function unlockCoach() {
 }
 
 function seedDemo() {
+  const hasCurrentWeekData = state.requests.length || state.draft.assignments.length || state.published.length;
+  if (hasCurrentWeekData && !window.confirm(`这会覆盖 ${getWeekRangeLabel()} 的当前测试/草案数据。确定要填入示例吗？`)) {
+    return;
+  }
   state.requests = [
     {
       id: makeId(),
@@ -970,6 +1069,7 @@ function generateDraft() {
         id: makeId(),
         requestId: session.request.id,
         name: session.request.name,
+        code: session.request.code || "",
         goal: session.goal,
         slotKey: choice,
         location: formatLocation(dayLocations[getDayId(choice)]),
@@ -1056,8 +1156,8 @@ function findIssues(assignments, unassigned, dayLocations) {
       issues.push({
         type: "location-choice",
         dayId: day.id,
-        title: `${day.label} 地点待确认`,
-      text: "当天地点偏好没有明显多数，需要 Dora 在 235 Grand 和 Bisby 里定一个。",
+        title: `${day.label} 需要 Dora 选地点`,
+        text: "这一天已经有人上课，但地点还没有确定。Dora 需要在 235 Grand 和 Bisby 里选一个。",
         severity: "review",
       });
     }
@@ -1070,7 +1170,7 @@ function findIssues(assignments, unassigned, dayLocations) {
         issues.push({
           type: "location-preference",
           dayId: day.id,
-          title: `${day.label} 地点需确认`,
+          title: `${day.label} 地点需要 Dora 看一下`,
           text: `${outsidePreference.map((item) => item.name).join("、")} 没有优先选择 ${location}，教练可确认是否仍安排在这里。`,
           severity: "review",
         });
@@ -1191,6 +1291,7 @@ function getDayOverviewLocation(dayId, dayItems, isPublished) {
 function renderMobileCoach() {
   renderMobileDayTabs();
   renderMobileDay();
+  renderMobileUnassigned();
   renderMobileIssues();
 }
 
@@ -1216,26 +1317,75 @@ function renderMobileDay() {
   const dayAssignments = state.draft.assignments.filter((item) => getDayId(item.slotKey) === day.id);
   els.mobileCoachDay.innerHTML = `
     <div class="mobile-location">
-      <span>${day.label} 地点</span>
+      <label>
+        <span>${day.label} 地点</span>
+        <select data-mobile-day-location="${day.id}">
+          <option value="" ${state.draft.dayLocations[day.id] ? "" : "selected"}>Dora 选地点</option>
+          ${LOCATIONS.map((item) => `<option value="${item}" ${state.draft.dayLocations[day.id] === item ? "selected" : ""}>${item}</option>`).join("")}
+        </select>
+      </label>
       <strong>${location}</strong>
     </div>
     <div class="mobile-slot-list">
       ${SLOTS.map((slot) => renderMobileSlot(`${day.id}-${slot.id}`, dayAssignments)).join("")}
     </div>
   `;
+
+  els.mobileCoachDay.querySelector("[data-mobile-day-location]")?.addEventListener("change", (event) => {
+    updateDayLocation(event.target.dataset.mobileDayLocation, event.target.value);
+  });
+
+  els.mobileCoachDay.querySelectorAll(".mobile-slot").forEach((slot) => {
+    slot.addEventListener("click", () => {
+      if (selectedMove) {
+        moveSelectedToSlot(slot.dataset.mobileSlot);
+        return;
+      }
+      const issue = state.draft.issues.find((item) => item.slotKey === slot.dataset.mobileSlot);
+      renderIssue(issue || null);
+    });
+  });
+
+  els.mobileCoachDay.querySelectorAll("[data-mobile-assignment-id]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectMoveSource("assignment", button.dataset.mobileAssignmentId);
+    });
+  });
+}
+
+function renderMobileUnassigned() {
+  if (!els.mobileUnassignedPool) return;
+  if (!state.draft.unassigned.length) {
+    els.mobileUnassignedPool.innerHTML = `<div class="empty compact">所有申请都已经排进日历。</div>`;
+    return;
+  }
+  els.mobileUnassignedPool.innerHTML = state.draft.unassigned.map((item) => `
+    <button class="${selectedMove?.type === "unassigned" && selectedMove.id === item.id ? "selected" : ""}" type="button" data-mobile-unassigned-id="${item.id}">
+      <strong>${item.request.name} · ${item.goal}</strong>
+      <span>可选：${item.request.availability.map(formatSlot).join(" / ")}</span>
+    </button>
+  `).join("");
+  els.mobileUnassignedPool.querySelectorAll("[data-mobile-unassigned-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectMoveSource("unassigned", button.dataset.mobileUnassignedId);
+    });
+  });
 }
 
 function renderMobileSlot(slotKey, dayAssignments) {
   const assignments = dayAssignments.filter((item) => item.slotKey === slotKey);
   const issue = state.draft.issues.find((item) => item.slotKey === slotKey);
+  const statusLabel = issue?.severity === "error" ? "需要调整" : issue?.severity === "review" ? "Dora 看一下" : "";
   return `
     <article class="mobile-slot ${issue ? issue.severity : ""}" data-mobile-slot="${slotKey}">
       <div>
         <strong>${formatSlot(slotKey)}</strong>
+        ${statusLabel ? `<em class="mobile-status ${issue.severity}">${statusLabel}</em>` : ""}
         <span>${formatLocation(state.draft.dayLocations[getDayId(slotKey)])}</span>
       </div>
       <div class="mobile-people">
-        ${assignments.length ? assignments.map((item) => `<span>${item.name} · ${item.goal}</span>`).join("") : "<span>空</span>"}
+        ${assignments.length ? assignments.map((item) => `<button class="${selectedMove?.type === "assignment" && selectedMove.id === item.id ? "selected" : ""}" type="button" data-mobile-assignment-id="${item.id}">${item.name} · ${item.goal}</button>`).join("") : "<span>空</span>"}
       </div>
     </article>
   `;
@@ -1267,15 +1417,33 @@ function renderStudentSummary() {
   els.studentSummary.innerHTML = state.requests.map((request) => {
     const assigned = state.draft.assignments.filter((item) => item.requestId === request.id).length;
     const status = assigned >= request.desiredCount ? "done" : assigned === 0 ? "blocked" : "needs";
+    const code = request.code || "";
     return `
       <article class="student-row ${status}">
         <strong>${request.name}</strong>
-        <span>想上 ${request.desiredCount} · 已排 ${assigned}</span>
+        <span>目标 ${request.desiredCount} 节 / 已排 ${assigned} 节</span>
         <small>${request.goals.map(normalizeGoal).join(" / ")} · 可用 ${request.availability.length} 个时间</small>
-        <small>识别码：${request.code || "未填写"}</small>
+        <div class="student-code-line">
+          <small>识别码：${code || "未填写"}</small>
+          ${code ? `<button type="button" data-copy-code="${escapeAttribute(code)}">复制</button>` : ""}
+        </div>
       </article>
     `;
   }).join("");
+  els.studentSummary.querySelectorAll("[data-copy-code]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const code = button.dataset.copyCode || "";
+      try {
+        await navigator.clipboard.writeText(code);
+        button.textContent = "已复制";
+      } catch {
+        button.textContent = code;
+      }
+      window.setTimeout(() => {
+        button.textContent = "复制";
+      }, 1600);
+    });
+  });
 }
 
 function renderCoachNotes() {
@@ -1289,8 +1457,11 @@ function renderCoachNotes() {
   els.coachNotesList.innerHTML = names.map((name) => `
     <article class="coach-note-card">
       <label class="field">
-        <span>${name}</span>
-        <textarea data-coach-note="${escapeAttribute(name)}" placeholder="训练偏好、伤病注意、下次计划...">${escapeTextarea(state.coachNotes[name] || "")}</textarea>
+        <span class="note-card-heading"><strong>${name}</strong><em>粘贴后自动保存</em></span>
+        <textarea data-coach-note="${escapeAttribute(name)}" placeholder="可以从 Apple Notes 复制过来：
+训练偏好：
+伤病注意：
+下次计划：">${escapeTextarea(state.coachNotes[name] || "")}</textarea>
       </label>
     </article>
   `).join("");
@@ -1307,7 +1478,8 @@ function getKnownStudentNames() {
   state.requests.forEach((request) => {
     if (request.name) names.add(request.name);
   });
-  Object.keys(state.routines || {}).forEach((name) => {
+  Object.entries(state.routines || {}).forEach(([key, routine]) => {
+    const name = getNameFromRoutineKey(key, routine);
     if (name) names.add(name);
   });
   state.published.forEach((assignment) => {
@@ -1327,12 +1499,14 @@ function renderLocationRow() {
         ? `平票 ${votes["235 Grand"]}:${votes.Bisby}`
         : `建议 ${votes["235 Grand"] > votes.Bisby ? "235 Grand" : "Bisby"} · ${votes["235 Grand"]}:${votes.Bisby}`
       : "待 Dora 选择";
+    const locationStatus = !location ? "Dora 选地点" : dayIssue ? "Dora 看一下" : "已确定";
     return `
       <label class="location-card ${dayIssue || !location ? "review" : "selected"}" data-day-card="${day.id}">
+        <span class="location-status">${locationStatus}</span>
         <span>${day.label}</span>
         <strong>${formatMonthDay(getDayDate(DAYS.findIndex((item) => item.id === day.id)))}</strong>
         <select data-day-location="${day.id}">
-          <option value="" ${location ? "" : "selected"}>地点待定</option>
+          <option value="" ${location ? "" : "selected"}>Dora 选地点</option>
           ${LOCATIONS.map((item) => `<option value="${item}" ${location === item ? "selected" : ""}>${item}</option>`).join("")}
         </select>
         <small>${suggestion}</small>
@@ -1391,11 +1565,13 @@ function renderSlot(slotKey) {
   const assignments = state.draft.assignments.filter((item) => item.slotKey === slotKey);
   const issue = state.draft.issues.find((item) => item.slotKey === slotKey);
   const className = issue?.severity === "error" ? "error" : issue?.severity === "review" ? "review" : "";
+  const statusLabel = issue?.severity === "error" ? "需要调整" : issue?.severity === "review" ? "Dora 看一下" : "";
   return `
     <article class="slot ${className}" data-slot-key="${slotKey}">
+      ${statusLabel ? `<span class="slot-status ${issue.severity}">${statusLabel}</span>` : ""}
       <div class="people">
         ${assignments.map((item) => `<button class="person-chip ${selectedMove?.type === "assignment" && selectedMove.id === item.id ? "selected" : ""}" draggable="true" data-assignment-id="${item.id}">${item.name}</button>`).join("")}
-        ${assignments.length < CAPACITY ? `<span class="drop-chip">可放入 ${CAPACITY - assignments.length} 人</span>` : ""}
+        ${assignments.length < CAPACITY ? `<span class="drop-chip">还可加 ${CAPACITY - assignments.length} 人</span>` : ""}
       </div>
       <strong>${assignments.map((item) => item.goal).join(" / ") || "空"}</strong>
       <span>${formatSlot(slotKey)} · ${formatLocation(state.draft.dayLocations[getDayId(slotKey)])}</span>
@@ -1427,13 +1603,15 @@ function renderIssue(issue, options = { focus: true }) {
   currentIssue = issue;
   els.applyRecommendation.style.display = "";
   if (!issue) {
+    if (els.issueState) els.issueState.textContent = "先点提醒格";
     els.issueTitle.textContent = "没有选中问题";
-    els.issueText.textContent = "点击黄色或红色格子查看建议。";
+    els.issueText.textContent = "点击标着“Dora 看一下”或“需要调整”的格子，这里会解释原因和建议。";
     els.issueRecommendation.innerHTML = "";
     els.applyRecommendation.disabled = true;
     focusIssuePanel(false, false);
     return;
   }
+  if (els.issueState) els.issueState.textContent = "正在查看这个提醒";
   els.issueTitle.textContent = issue.title;
   els.issueText.textContent = issue.text;
   const recommendation = buildRecommendation(issue);
@@ -1761,12 +1939,14 @@ function selectMoveSource(type, id) {
   dragged = { type, id };
   const label = getMoveSourceLabel(selectedMove);
   currentIssue = null;
+  if (els.issueState) els.issueState.textContent = "正在移动学员";
   els.issueTitle.textContent = `已选中 ${label}`;
   els.issueText.textContent = "现在点一个目标时间格，就会把这个学员移动过去。手机上不用拖拽，点选就可以。";
   els.issueRecommendation.innerHTML = `<div class="recommend-box"><strong>移动方式</strong><p>点任意一个有空位的时间格；如果目标时间不在学员可用范围，系统会提示需要先私下确认。</p></div>`;
   els.applyRecommendation.disabled = true;
   renderCoachCalendar();
   renderUnassigned();
+  renderMobileCoach();
   focusIssuePanel(false);
 }
 
@@ -1817,6 +1997,7 @@ function moveDraggedToSlot(slotKey) {
       selectedMove = null;
       renderCoachCalendar();
       renderUnassigned();
+      renderMobileCoach();
       return;
     }
   }
@@ -1875,6 +2056,7 @@ function moveDraggedToSlot(slotKey) {
         id: makeId(),
         requestId: item.request.id,
         name: item.request.name,
+        code: item.request.code || "",
         goal: item.goal,
         slotKey,
         location: formatLocation(state.draft.dayLocations[getDayId(slotKey)]),
@@ -1890,10 +2072,18 @@ function moveDraggedToSlot(slotKey) {
 }
 
 function publishSchedule() {
-  state.published = [...state.draft.assignments];
+  state.published = state.draft.assignments.map(enrichAssignmentWithCode);
   saveState();
   renderMySchedule();
   alert("已发布。学员回到提交页输入名字即可看到自己的安排。");
+}
+
+function enrichAssignmentWithCode(assignment) {
+  const request = state.requests.find((item) => item.id === assignment.requestId);
+  return {
+    ...assignment,
+    code: assignment.code || request?.code || "",
+  };
 }
 
 function exportCalendar() {
@@ -2116,7 +2306,7 @@ function normalizeState(saved) {
   const normalized = {
     currentWeekKey,
     weeks,
-    routines: saved.routines || {},
+    routines: isPlainObject(saved.routines) ? saved.routines : {},
     settings: isPlainObject(saved.settings) ? saved.settings : {},
     coachNotes: isPlainObject(saved.coachNotes) ? saved.coachNotes : {},
   };

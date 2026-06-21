@@ -1,85 +1,68 @@
-# 发布步骤
+# Dora Training 发布说明
 
-这份说明用于把本地 demo 变成教练和学员都能访问的线上版本。
-
-## 你需要做的部分
-
-### 1. 创建 Firebase 项目
-
-1. 打开 https://console.firebase.google.com/
-2. 点击 `Create a project` / `Add project`
-3. 项目名可以填 `training-scheduler`
-4. Google Analytics 可以先关掉
-5. 点击创建项目
-
-### 2. 添加 Web App
-
-1. 进入 Firebase 项目首页
-2. 点击 Web 图标 `</>`
-3. App nickname 可以填 `training-scheduler-web`
-4. 不需要勾选 Firebase Hosting
-5. 点击注册
-6. 复制页面里显示的 `firebaseConfig`
-
-### 3. 开启 Firestore
-
-1. 左侧进入 `Build` -> `Firestore Database`
-2. 点击创建数据库
-3. 先选择 test mode
-4. Location 选择离你们近的区域即可
-5. 创建完成后进入 `Rules`
-6. MVP 试用期可以先用下面规则，之后再升级权限：
+当前目录就是 GitHub Pages 发布仓库：
 
 ```txt
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /training-scheduler/{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
+github-training-scheduler/
 ```
 
-## 我可以帮你做的部分
+远程仓库：
 
-### 4. 填 Firebase 配置
-
-把你复制到的 `firebaseConfig` 发给我，或者自己打开 `firebase-config.js`，把里面的占位值换成真实值，并把：
-
-```js
-enabled: false
+```txt
+https://github.com/madison-lgtm/training-scheduler.git
 ```
 
-改成：
+线上网址：
 
-```js
-enabled: true
+```txt
+https://madison-lgtm.github.io/training-scheduler/
 ```
 
-### 5. 发布到 GitHub Pages
+## 当前状态
 
-1. 在 GitHub 创建一个新 repository
-2. 上传 `training-scheduler-app` 文件夹里的文件
-3. 进入 repository 的 `Settings`
-4. 打开 `Pages`
-5. Source 选择 `Deploy from a branch`
-6. Branch 选择 `main`
-7. Folder 选择 `/root`
-8. 保存
-9. 等 1 到 3 分钟，GitHub 会生成一个 `github.io` 链接
+本地已经有最新版本，并且已经 commit。因为当前 Codex 环境暂时解析不到 `github.com`，所以最后一步 push 可能会失败。
 
-## 发布后测试
+检查状态：
 
-1. 用手机打开 GitHub Pages 链接
-2. 提交一个学员申请
-3. 在电脑打开同一个链接
-4. 输入教练 PIN
-5. 确认能看到刚才手机提交的数据
-6. 生成草案并发布
-7. 回到学员页输入名字，确认能看到自己的安排
+```bash
+cd /Users/tchen273/Documents/Codex/2026-06-19/5-track-track-schedule-6-7/github-training-scheduler
+git status
+```
 
-## 注意
+如果看到类似：
 
-当前版本是朋友小范围 MVP。Firestore test mode 和前端 PIN 都不是严格安全方案。等真的给更多学员使用时，应该升级成正式权限规则或登录系统。
+```txt
+Your branch is ahead of 'origin/main' by 1 commit.
+```
+
+说明本地已经准备好，只差推送。
+
+## 手动上线
+
+在网络正常、GitHub 登录状态正常的电脑终端里运行：
+
+```bash
+cd /Users/tchen273/Documents/Codex/2026-06-19/5-track-track-schedule-6-7/github-training-scheduler
+git push
+```
+
+推送成功后，GitHub Pages 通常 1 到 3 分钟内更新。
+
+## 上线后测试
+
+1. 手机打开 `https://madison-lgtm.github.io/training-scheduler/`。
+2. 进入 `Member 入口`，输入名字和识别码。
+3. 设置默认安排，提交一个选中周申请。
+4. 进入 `Dora 工作台`，输入 Dora PIN。
+5. 点 `操作` -> `生成草案`。
+6. 手机端测试点学员名字，再点目标时间格，确认可以移动。
+7. 点 `发布最终安排`。
+8. 回到 Member 页，输入同一个名字和识别码，确认能看到自己的课。
+
+## Firebase / 数据同步
+
+`firebase-config.js` 已经配置为启用 Firebase 时读取云端同一份数据。没有开启或连接失败时，网页会进入本地演示模式，只保存在当前浏览器里。
+
+## 安全提醒
+
+这个版本适合 Dora 和少量会员小范围使用。Dora PIN 是轻量入口保护，不是正式账号系统。后续如果会员变多，建议加正式登录和后端权限。

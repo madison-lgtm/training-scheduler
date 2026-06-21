@@ -2,7 +2,12 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Dora Training weekly private coaching scheduler for members and coach." />
+    <meta name="theme-color" content="#fff0f8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Dora Training" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Dora Training</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -20,31 +25,27 @@
             <button class="ghost" id="thisWeek" type="button">回到本周</button>
           </div>
         </div>
-        <div class="top-actions role-actions">
-          <button class="ghost" id="studentMode" data-view-target="student">Member入口</button>
-          <button class="ghost" id="coachEntry" data-view-target="pin">教练入口</button>
-        </div>
+        <button class="ghost switch-entry" type="button" data-view-target="role">切换入口</button>
       </header>
 
       <section class="view active" id="roleView">
         <section class="panel role-panel">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Entrance</p>
-              <h2>请选择入口</h2>
-              <p class="muted">Member 进入自己的训练周；Dora 进入教练工作台。</p>
+              <p class="eyebrow">Dora Studio</p>
+              <h2>选择入口</h2>
             </div>
           </div>
           <div class="role-grid">
             <button class="role-card" id="roleStudent" type="button" data-view-target="student">
               <span>Member</span>
-              <strong>Member入口</strong>
-              <small>设置默认时间、提交本周可用时间，也查看 Dora 发布的课程。</small>
+              <strong>查看或提交训练安排</strong>
+              <small>先看 Dora 发布给你的课程；需要改某一周时，再提交可用时间。</small>
             </button>
             <button class="role-card" id="roleCoach" type="button" data-view-target="pin">
-              <span>Dora Studio</span>
-              <strong>教练入口</strong>
-              <small>查看每周安排、调整排课草案，并发布最终课表。</small>
+              <span>Dora</span>
+              <strong>进入排课工作台</strong>
+              <small>查看整周安排、处理冲突建议，并发布最终课表。</small>
             </button>
           </div>
         </section>
@@ -55,11 +56,11 @@
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Confirmed</p>
-              <h2>我的本周安排</h2>
+              <h2 id="myScheduleTitle">我的选中周安排</h2>
             </div>
           </div>
           <div id="mySchedule" class="my-schedule-list">
-            <div class="empty">输入名字后可以查看已发布给你的课程。</div>
+            <div class="empty">输入名字后可以查看选中周已发布给你的课程。</div>
           </div>
         </section>
 
@@ -67,11 +68,13 @@
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Member Space</p>
-              <h2>提交或修改申请</h2>
+              <h2>提交选中周申请</h2>
             </div>
             <span class="week-label" id="studentWeekLabel"></span>
           </div>
+          <div class="student-week-context" id="studentWeekContext"></div>
 
+          <div class="student-progress-card" id="studentProgressCard"></div>
           <div class="student-step-tabs" id="studentStepTabs"></div>
 
           <section class="student-step active" data-step="0">
@@ -88,9 +91,9 @@
                 <input id="studentName" placeholder="比如：苏" />
               </label>
               <label class="field">
-                <span>识别码（可选）</span>
+                <span>识别码（建议填）</span>
                 <input id="studentCode" placeholder="比如手机号后四位" />
-                <small>用来确认是你本人，之后查课和修改申请时输入同一个编号就行。</small>
+                <small>建议用手机号后四位。之后查课、修改申请都用同一个编号；忘了可以问 Dora，她在教练端能帮你查。</small>
               </label>
             </div>
             <section class="default-panel" id="defaultPanel">
@@ -129,14 +132,15 @@
                   </div>
                 </div>
                 <div class="routine-save-row">
-                  <button class="primary" id="saveDefaultRoutine" type="button">保存默认安排</button>
-                  <small>保存默认不会提交本周申请；保存后再选择这周是否照常。</small>
+                  <button class="primary" id="saveDefaultRoutine" type="button">保存默认模板</button>
+                  <small>这里只是保存常用模板；还不会提交给 Dora。</small>
                 </div>
               </section>
               <div class="quick-actions" id="weeklyQuickActions">
-                <button class="primary" id="useDefaultWeek" type="button">这周照常</button>
-                <button class="ghost" id="editDefaultRoutine" type="button">修改默认</button>
-                <button class="ghost" id="customizeWeek" type="button">这周要改</button>
+                <p>这周怎么处理？</p>
+                <button class="primary" id="useDefaultWeek" type="button">照默认提交这一周</button>
+                <button class="ghost" id="editDefaultRoutine" type="button">修改默认模板</button>
+                <button class="ghost" id="customizeWeek" type="button">这周临时改</button>
               </div>
             </section>
           </section>
@@ -145,13 +149,13 @@
             <div class="step-heading">
               <span>2</span>
               <div>
-                <h3>这周想上几次</h3>
-                <p>先告诉 Dora 这周想上几节，下一步再点选你有空的时间。</p>
+                <h3>选中周想上几次</h3>
+                <p>先告诉 Dora 这个日期范围想上几节，下一步再点选你有空的时间。</p>
               </div>
             </div>
             <div class="weekly-intent">
               <label class="field">
-                <span>本周想上几次</span>
+                <span>选中周想上几次</span>
                 <input id="sessionCount" type="hidden" value="1" />
                 <div class="count-options" id="sessionCountOptions">
                   <button class="active" type="button" data-session-count="1">1 次</button>
@@ -171,7 +175,7 @@
             <div class="step-heading">
               <span>3</span>
               <div>
-                <h3>这周你什么时候有空</h3>
+                <h3>选中周你什么时候有空</h3>
                 <p>点上所有你可以来的时间，Dora 会从里面安排最终课程。</p>
               </div>
             </div>
@@ -182,8 +186,8 @@
             <div class="step-heading">
               <span>4</span>
               <div>
-                <h3>这周想练什么</h3>
-                <p>选择这周想覆盖的训练重点，顺序可以交给 Dora 安排。</p>
+                <h3>选中周想练什么</h3>
+                <p>选择这个日期范围想覆盖的训练重点，顺序可以交给 Dora 安排。</p>
               </div>
             </div>
             <div class="goal-picker" id="sessionGoals"></div>
@@ -207,14 +211,14 @@
             <div class="step-heading">
               <span>6</span>
               <div>
-                <h3>确认本周申请</h3>
+                <h3>确认选中周申请</h3>
                 <p>提交后 Dora 会看到这份申请；需要改的话可以回到前面修改。</p>
               </div>
             </div>
             <div id="requestPreview"></div>
             <label class="field">
-              <span>本周备注</span>
-              <textarea id="studentNotes" placeholder="比如：这周出差，周三不行；训练内容希望上下肢交替。"></textarea>
+              <span>选中周备注</span>
+              <textarea id="studentNotes" placeholder="比如：这一周出差，周三不行；训练内容希望上下肢交替。"></textarea>
             </label>
           </section>
 
@@ -222,7 +226,7 @@
             <div id="studentMessage" class="message"></div>
             <button class="ghost" id="studentPrev" type="button">上一步</button>
             <button class="ghost" id="studentNext" type="button">下一步</button>
-            <button class="primary" id="submitRequest">提交给教练</button>
+            <button class="primary" id="submitRequest">提交给 Dora</button>
           </div>
         </section>
       </section>
@@ -231,7 +235,7 @@
         <section class="panel pin-panel">
           <p class="eyebrow">Dora Studio</p>
           <h2>输入 Dora PIN</h2>
-          <p class="muted">初始 PIN 是 2468。进入后可以在「操作」里修改。</p>
+          <p class="muted">初始 PIN 是 2468。进入后可以在「本周操作」里修改。</p>
           <label class="field">
             <span>PIN</span>
             <input id="coachPin" type="password" inputmode="numeric" />
@@ -249,17 +253,19 @@
             <p class="eyebrow">Dora Studio</p>
             <h2>训练周工作台</h2>
             <p class="muted">先查看已有安排，需要修改时再进入操作台。</p>
+            <p class="coach-week-context" id="coachWeekContext"></p>
           </div>
           <details class="coach-actions">
-            <summary>操作</summary>
+            <summary>本周操作</summary>
             <div class="coach-action-menu">
-              <button class="ghost" id="seedDemo" type="button">
-                <strong>填入示例</strong>
-                <span>快速放入一组测试数据</span>
-              </button>
+              <p class="menu-hint">一般顺序：先生成草案，调整后发布；需要放进日历时再导出。</p>
               <button class="ghost" id="generateDraft" type="button">
                 <strong>生成草案</strong>
-                <span>根据本周申请自动排一版</span>
+                <span id="generateDraftCopy">根据选中周申请自动排一版</span>
+              </button>
+              <button class="ghost" id="seedDemo" type="button">
+                <strong>填入示例</strong>
+                <span id="seedDemoCopy">快速放入一组测试数据</span>
               </button>
               <button class="ghost" id="exportCalendar" type="button">
                 <strong>导出当前周日历</strong>
@@ -305,19 +311,30 @@
             <section class="panel mobile-today">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Quick View</p>
-                  <h2>本周简表</h2>
+                  <p class="eyebrow">手机操作</p>
+                  <h2>按天操作</h2>
                 </div>
               </div>
               <div class="mobile-day-tabs" id="mobileDayTabs"></div>
               <div id="mobileCoachDay"></div>
             </section>
 
+            <section class="panel mobile-unassigned-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">待安排</p>
+                  <h2>还没安排的申请</h2>
+                </div>
+              </div>
+              <p class="muted compact-copy">这些课已经提交给 Dora，但还没排到具体时间。点一个申请，再点上方时间格安排进去。</p>
+              <div id="mobileUnassignedPool" class="mobile-pool"></div>
+            </section>
+
             <section class="panel mobile-issues">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">To Review</p>
-                  <h2>待处理</h2>
+                  <p class="eyebrow">提醒</p>
+                  <h2>需要 Dora 看一下</h2>
                 </div>
               </div>
               <div id="mobileCoachIssues"></div>
@@ -330,36 +347,43 @@
                 <h3>学员状态</h3>
                 <span id="requestCount">0 人提交</span>
               </div>
+              <p class="muted compact-copy">这里会显示每位会员的识别码；如果会员忘记了，可以复制后发给她。</p>
               <div id="studentSummary"></div>
             </aside>
 
             <aside class="panel coach-notes-panel">
               <div class="rail-heading">
-                <h3>学员笔记</h3>
-                <span>长期保存</span>
+                <h3>复制 Apple Notes 到这里</h3>
+                <span>自动保存</span>
               </div>
-              <p class="muted compact-copy">可以把 Apple Notes 里的重点复制到这里，Dora 下次排课时就能直接看。</p>
+              <p class="muted compact-copy">从 Apple Notes 复制每个学员的重点，粘贴到对应名字下面。下次排课会继续保留。</p>
               <div id="coachNotesList"></div>
             </aside>
 
             <section class="panel calendar-panel">
+              <div class="workbench-hint">
+                <strong>手机也可以调整</strong>
+                <span>先点学员名字，再点目标时间格；电脑上也可以直接拖拽。</span>
+              </div>
               <div class="status-legend" aria-label="排课状态说明">
-                <span><i class="legend-dot review"></i>待确认</span>
-                <span><i class="legend-dot error"></i>需修正</span>
-                <span><i class="legend-dot selected"></i>已选地点</span>
+                <span><i class="legend-dot review"></i>Dora 看一下：地点或拼课需要教练判断</span>
+                <span><i class="legend-dot error"></i>需要调整：现在不能直接这样排</span>
+                <span><i class="legend-dot selected"></i>已确定：可以照这个上课</span>
               </div>
               <div class="location-row" id="locationRow"></div>
               <div class="coach-calendar" id="coachCalendar"></div>
               <section class="holding-pool">
-                <h3>还没排进课表</h3>
+                <h3>还没安排的申请</h3>
+                <p class="muted compact-copy">这些课已经提交给 Dora，但还没排到具体时间。可以点一个名字，再点上方时间格安排进去。</p>
                 <div id="unassignedPool" class="pool-items"></div>
               </section>
             </section>
 
             <aside class="panel detail-panel">
-              <p class="eyebrow">当前问题</p>
-              <h3 id="issueTitle">选择一个有问题的格子</h3>
-              <p id="issueText" class="problem muted">系统会在这里显示问题和建议。</p>
+              <span class="issue-state" id="issueState">先点提醒格</span>
+              <p class="eyebrow">点中格子的提醒</p>
+              <h3 id="issueTitle">点带标签的格子看原因</h3>
+              <p id="issueText" class="problem muted">系统会在这里解释为什么需要确认，以及 Dora 可以怎么处理。</p>
               <div id="issueRecommendation"></div>
               <button class="primary full" id="applyRecommendation" disabled>应用推荐</button>
             </aside>
