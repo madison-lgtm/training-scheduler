@@ -1,16 +1,19 @@
 :root {
-  --ink: #171a18;
-  --muted: #6b736f;
-  --line: #dfe5e1;
-  --bg: #f6f7f6;
+  --ink: #24191f;
+  --muted: #786b72;
+  --line: #f0c8dc;
+  --bg: #fff3f9;
   --surface: #fff;
-  --green: #147858;
-  --green-soft: #e8f6ef;
-  --amber: #a86500;
-  --amber-soft: #fff4df;
-  --red: #aa3a3a;
-  --red-soft: #ffeded;
-  --blue-soft: #edf4ff;
+  --green: #c33a86;
+  --green-soft: #ffe3f2;
+  --amber: #a76724;
+  --amber-soft: #fff2df;
+  --red: #b3435e;
+  --red-soft: #ffeaf0;
+  --blue-soft: #f0f7ff;
+  --mint: #d9fff4;
+  --lime: #e7ff75;
+  --purple: #7d5cff;
 }
 
 * {
@@ -20,7 +23,11 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    linear-gradient(90deg, rgba(195, 58, 134, 0.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(125, 92, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, #fff0f8 0%, #fff9ef 54%, #f8fff5 100%);
+  background-size: 28px 28px, 28px 28px, auto;
   color: var(--ink);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -62,15 +69,17 @@ p {
 
 .eyebrow {
   color: var(--green);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 900;
   text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 h1 {
   margin-top: 3px;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1;
+  font-size: clamp(2.15rem, 4vw, 3.8rem);
+  line-height: 0.98;
+  font-weight: 950;
 }
 
 .sync-status {
@@ -101,6 +110,31 @@ h1 {
   border-color: rgba(170, 58, 58, 0.22);
   background: var(--red-soft);
   color: var(--red);
+}
+
+.week-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 6px;
+  border: 1px solid rgba(182, 55, 115, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 28px rgba(95, 57, 73, 0.08);
+}
+
+.week-switcher strong {
+  min-width: 112px;
+  text-align: center;
+}
+
+.icon-button {
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  font-size: 1.35rem;
+  line-height: 1;
 }
 
 h2 {
@@ -135,14 +169,16 @@ h3 {
 .ghost {
   min-height: 40px;
   padding: 0 14px;
-  border-radius: 8px;
+  border-radius: 999px;
   font-weight: 900;
 }
 
 .primary {
-  border: 0;
-  background: var(--green);
+  border: 2px solid #22151f;
+  background: linear-gradient(135deg, #c33a86, #ff74b7 58%, #e7ff75);
   color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+  box-shadow: 4px 4px 0 #22151f;
 }
 
 .primary:disabled {
@@ -151,8 +187,8 @@ h3 {
 }
 
 .ghost {
-  border: 1px solid var(--line);
-  background: #fff;
+  border: 2px solid rgba(36, 25, 31, 0.14);
+  background: rgba(255, 255, 255, 0.82);
   color: var(--ink);
 }
 
@@ -166,7 +202,7 @@ h3 {
 }
 
 #studentView {
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+  grid-template-columns: 1fr;
   align-items: start;
 }
 
@@ -177,10 +213,11 @@ h3 {
 
 .panel {
   min-width: 0;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
+  padding: 18px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 8px 8px 0 rgba(195, 58, 134, 0.09), 0 18px 46px rgba(84, 50, 66, 0.06);
 }
 
 .role-panel {
@@ -196,20 +233,22 @@ h3 {
 .role-card {
   display: grid;
   gap: 8px;
-  min-height: 164px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
+  min-height: 176px;
+  padding: 20px;
+  border: 2px solid rgba(195, 58, 134, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
   color: var(--ink);
   text-align: left;
+  box-shadow: 0 14px 34px rgba(84, 50, 66, 0.07);
 }
 
 .role-card:hover,
 .role-card:focus-visible {
   border-color: rgba(20, 120, 88, 0.32);
-  background: var(--green-soft);
+  background: #fff;
   outline: none;
+  transform: translateY(-1px);
 }
 
 .role-card span {
@@ -230,6 +269,10 @@ h3 {
   color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.45;
+}
+
+.role-card > * {
+  pointer-events: none;
 }
 
 .panel-heading,
@@ -256,8 +299,8 @@ h3 {
   justify-content: center;
   gap: 6px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
   color: var(--muted);
   font-weight: 900;
 }
@@ -269,7 +312,7 @@ h3 {
   display: inline-grid;
   place-items: center;
   border-radius: 999px;
-  background: #eef4f1;
+  background: var(--lime);
   color: var(--green);
   font-size: 0.8rem;
   font-weight: 900;
@@ -298,10 +341,10 @@ h3 {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px;
-  border: 1px solid rgba(20, 120, 88, 0.14);
-  border-radius: 8px;
-  background: var(--green-soft);
+  padding: 14px;
+  border: 1px solid rgba(182, 55, 115, 0.12);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fde8f1, #fff7fb);
 }
 
 .step-heading p {
@@ -313,10 +356,10 @@ h3 {
 .default-panel {
   display: grid;
   gap: 10px;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fbfcfb;
+  border-radius: 14px;
+  background: #fffafd;
 }
 
 .default-empty,
@@ -358,6 +401,25 @@ h3 {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.routine-section {
+  display: grid;
+  gap: 8px;
+}
+
+.routine-section > span,
+.routine-save-row small {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.routine-save-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
 .weekly-intent {
   grid-template-columns: 180px minmax(0, 1fr);
   margin: 14px 0;
@@ -369,12 +431,19 @@ h3 {
   font-weight: 800;
 }
 
+.field small {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 input,
 select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fff;
   color: var(--ink);
 }
@@ -395,47 +464,86 @@ textarea {
 .routine-box,
 .intent-copy,
 .holding-pool {
-  padding: 12px;
+  padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fbfcfb;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
 }
 
 .intent-copy {
   display: grid;
   gap: 3px;
   align-content: center;
-  background: var(--green-soft);
-  border-color: rgba(20, 120, 88, 0.18);
+  background: #fff2f7;
+  border-color: rgba(182, 55, 115, 0.14);
 }
 
-.session-list {
+.goal-picker {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 14px;
 }
 
-.session-item {
+.goal-picker-copy {
   display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 10px;
-  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.goal-picker-copy strong {
+  color: var(--ink);
+}
+
+.goal-options,
+.count-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.goal-options button,
+.count-options button {
+  min-height: 44px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: #fff;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.goal-options button.selected,
+.count-options button.active {
+  border-color: rgba(20, 120, 88, 0.28);
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .check-pill {
   display: inline-flex;
+  position: relative;
   align-items: center;
-  gap: 7px;
-  min-height: 38px;
-  padding: 0 12px;
+  justify-content: center;
+  min-width: 126px;
+  min-height: 46px;
+  padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
   font-weight: 900;
+}
+
+.check-pill:has(input:checked) {
+  border-color: rgba(20, 120, 88, 0.28);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.check-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .availability-grid {
@@ -471,15 +579,76 @@ textarea {
 .slot-toggle {
   min-height: 74px;
   border: 0;
-  background: #fff;
+  background: #fffafc;
   color: var(--muted);
   font-weight: 900;
 }
 
 .slot-toggle.selected {
-  background: var(--green-soft);
+  background: #ffe0f0;
   color: var(--green);
-  outline: inset 0 0 0 2px rgba(20, 120, 88, 0.18);
+  outline: inset 0 0 0 2px rgba(195, 58, 134, 0.24);
+  box-shadow: inset 0 -5px 0 rgba(231, 255, 117, 0.7);
+}
+
+.submission-summary {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: #fffafd;
+}
+
+.submission-summary.submitted {
+  justify-items: center;
+  min-height: 310px;
+  align-content: center;
+  text-align: center;
+  border-color: rgba(195, 58, 134, 0.3);
+  background: linear-gradient(135deg, #ffe3f2, #fff7d8);
+  box-shadow: 8px 8px 0 rgba(36, 25, 31, 0.16);
+}
+
+.submission-summary span {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.submission-summary p {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.submission-summary.submitted strong {
+  font-size: 1.35rem;
+}
+
+.submission-summary.submitted h3 {
+  font-size: 1.7rem;
+}
+
+.success-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 2rem;
+  font-weight: 950;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.success-copy {
+  max-width: 560px;
 }
 
 .message {
@@ -656,9 +825,24 @@ textarea {
 
 .workbench {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 310px;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-areas:
+    "calendar detail"
+    "students detail";
   gap: 12px;
   align-items: start;
+}
+
+.student-rail {
+  grid-area: students;
+}
+
+.calendar-panel {
+  grid-area: calendar;
+}
+
+.detail-panel {
+  grid-area: detail;
 }
 
 .coach-mobile-panel {
@@ -720,6 +904,11 @@ textarea {
 .location-card small {
   color: var(--muted);
   font-size: 0.76rem;
+}
+
+.location-card strong {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .location-card.review {
@@ -835,6 +1024,10 @@ textarea {
   #studentView,
   .workbench {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "calendar"
+      "detail"
+      "students";
   }
 
   .calendar-panel,
@@ -850,22 +1043,75 @@ textarea {
 
 @media (max-width: 680px) {
   .app {
-    width: min(100% - 18px, 1480px);
-    padding-top: 14px;
+    width: min(100% - 14px, 1480px);
+    padding-top: 10px;
   }
 
   .topbar,
   .coachbar,
-  .top-actions,
   .submit-row {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .topbar {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .topbar .eyebrow {
+    font-size: 0.68rem;
+  }
+
+  .top-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .top-actions .ghost {
+    min-height: 38px;
+    padding: 0 10px;
+  }
+
+  .week-switcher {
+    width: 100%;
+    gap: 6px;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 5px;
+  }
+
+  .week-switcher strong {
+    min-width: 86px;
+    font-size: 0.95rem;
+  }
+
+  .week-switcher .ghost:not(.icon-button) {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 0.9rem;
+  }
+
+  .icon-button {
+    width: 34px;
+    min-height: 34px;
+  }
+
+  .sync-status {
+    margin-top: 6px;
+    max-width: 100%;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .form-grid,
   .routine-grid,
   .weekly-intent,
-  .session-item,
+  .goal-options,
+  .count-options,
   .role-grid,
   .coach-schedule-grid {
     grid-template-columns: 1fr;
@@ -883,6 +1129,7 @@ textarea {
 
   .role-card {
     min-height: 138px;
+    padding: 16px;
   }
 
   .student-step-tabs {
@@ -892,21 +1139,23 @@ textarea {
   }
 
   .student-step-tabs button {
-    min-width: 92px;
-    min-height: 38px;
+    min-width: 76px;
+    min-height: 34px;
     flex: 0 0 auto;
+    padding: 0 8px;
+    font-size: 0.85rem;
   }
 
   .step-heading {
     padding: 10px;
   }
 
-  #studentView {
-    grid-template-columns: 1fr;
+  .step-heading h3 {
+    font-size: 0.96rem;
   }
 
-  .my-schedule {
-    order: -1;
+  .step-heading p {
+    font-size: 0.86rem;
   }
 
   .routine-box {
@@ -920,9 +1169,9 @@ textarea {
   }
 
   .availability-grid {
-    min-width: 0;
-    grid-template-columns: 72px repeat(4, minmax(86px, 1fr));
-    font-size: 0.85rem;
+    min-width: 600px;
+    grid-template-columns: 70px repeat(4, minmax(112px, 1fr));
+    font-size: 0.82rem;
   }
 
   .availability-grid .head,
@@ -936,11 +1185,31 @@ textarea {
   }
 
   h1 {
-    font-size: 2.25rem;
+    font-size: 2rem;
   }
 
   .panel {
     padding: 12px;
+    border-radius: 12px;
+  }
+
+  .panel + .panel {
+    margin-top: 2px;
+  }
+
+  .my-schedule .panel-heading,
+  .student-card .panel-heading {
+    align-items: start;
+    gap: 8px;
+  }
+
+  .default-panel,
+  .submission-summary {
+    padding: 12px;
+  }
+
+  .submission-summary.submitted {
+    min-height: 240px;
   }
 
   .coachbar {
@@ -952,17 +1221,16 @@ textarea {
   }
 
   .coach-mobile-panel {
-    display: grid;
-    gap: 10px;
+    display: none;
   }
 
   .workbench {
-    display: block;
+    display: grid;
   }
 
   .student-rail,
   .calendar-panel {
-    display: none;
+    display: block;
   }
 
   .detail-panel {
@@ -988,6 +1256,12 @@ textarea {
     border-color: rgba(20, 120, 88, 0.25);
     background: var(--green-soft);
     color: var(--green);
+  }
+
+  .mobile-day-tabs span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
   }
 
   .mobile-location,
