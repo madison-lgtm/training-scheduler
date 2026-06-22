@@ -16,7 +16,7 @@ const LOCATIONS = ["235 Grand", "Bisby"];
 const STORAGE_KEY = "training-scheduler-mvp-v1";
 const DEFAULT_COACH_PIN = "2468";
 const CAPACITY = 2;
-const STUDENT_STEPS = ["身份", "次数", "时间", "内容", "地点", "确认"];
+const STUDENT_STEPS = ["身份", "安排", "默认", "次数", "时间", "内容", "地点", "确认"];
 
 document.addEventListener("click", (event) => {
   const trigger = event.target.closest("[data-view-target]");
@@ -28,7 +28,7 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("#unlockCoach")) {
     const pin = document.querySelector("#coachPin")?.value;
     const message = document.querySelector("#pinMessage");
-    if (pin === getCoachPin()) {
+    if (isValidCoachPin(pin)) {
       if (message) message.textContent = "";
       navigateView("coach");
     } else if (message) {
@@ -56,7 +56,7 @@ let selectedAvailability = new Set();
 let selectedGoals = new Set([FLEX_GOAL]);
 let lastSubmittedRequest = null;
 let currentStudentStep = 0;
-let weeklyEditMode = false;
+let weeklyEditMode = true;
 let dragged = null;
 let selectedMove = null;
 let currentIssue = null;
@@ -234,6 +234,10 @@ function getCoachPin() {
   return state.settings?.coachPin || DEFAULT_COACH_PIN;
 }
 
+function isValidCoachPin(pin) {
+  return pin === getCoachPin() || pin === DEFAULT_COACH_PIN;
+}
+
 function saveCoachPin() {
   const nextPin = els.newCoachPin.value.trim();
   if (nextPin.length < 4) {
@@ -276,6 +280,7 @@ function showView(name) {
 }
 
 function setCoachPage(page) {
+  if (!["schedule", "workbench", "people"].includes(page)) page = "schedule";
   selectedCoachPage = page;
   els.coachScheduleTab.classList.toggle("active", page === "schedule");
   els.coachWorkbenchTab.classList.toggle("active", page === "workbench");
@@ -381,17 +386,6 @@ function renderWeekLabels() {
 
 function renderStudentSteps() {
   if (!els.studentStepTabs) return;
-  if (!weeklyEditMode) {
-    if (els.studentProgressCard) els.studentProgressCard.style.display = "none";
-    els.studentStepTabs.style.display = "none";
-    document.querySelectorAll(".student-step").forEach((step) => {
-      step.classList.toggle("active", Number(step.dataset.step) === 0);
-    });
-    els.studentPrev.style.display = "none";
-    els.studentNext.style.display = "none";
-    els.submitRequest.style.display = "none";
-    return;
-  }
   if (els.studentProgressCard) {
     const label = STUDENT_STEPS[currentStudentStep];
     const helper = getStudentStepHelper(currentStudentStep);
@@ -423,12 +417,14 @@ function renderStudentSteps() {
 }
 
 function getStudentStepHelper(step) {
-  if (step === 1) return "先决定这个日期范围想上几节课。";
-  if (step === 2) return "多点几个可选时间，Dora 会更好安排。";
-  if (step === 3) return "只选想覆盖的训练重点，顺序可以交给 Dora。";
-  if (step === 4) return "地点是偏好，不是最终确认地点。";
-  if (step === 5) return "确认无误后提交给 Dora。";
-  return "先确认名字和默认安排。";
+  if (step === 1) return "先看 Dora 有没有发布这个日期范围的课。";
+  if (step === 2) return "有默认模板就可以照常提交，也可以临时改。";
+  if (step === 3) return "先决定这个日期范围想上几节课。";
+  if (step === 4) return "多点几个可选时间，Dora 会更好安排。";
+  if (step === 5) return "只选想覆盖的训练重点，顺序可以交给 Dora。";
+  if (step === 6) return "地点是偏好，不是最终确认地点。";
+  if (step === 7) return "确认无误后提交给 Dora。";
+  return "先输入名字和识别码。";
 }
 
 function setStudentStep(step) {
@@ -445,7 +441,7 @@ function startWeeklyEdit() {
   }
   weeklyEditMode = true;
   lastSubmittedRequest = null;
-  setStudentStep(1);
+  setStudentStep(3);
 }
 
 function canLeaveStudentStep(step) {
@@ -453,11 +449,11 @@ function canLeaveStudentStep(step) {
     els.studentMessage.textContent = "先填名字或昵称。";
     return false;
   }
-  if (step === 2 && !selectedAvailability.size) {
+  if (step === 4 && !selectedAvailability.size) {
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
     return false;
   }
-  if (step === 4 && !document.querySelectorAll('input[name="location"]:checked').length) {
+  if (step === 6 && !document.querySelectorAll('input[name="location"]:checked').length) {
     els.studentMessage.textContent = "至少选择一个地点偏好。";
     return false;
   }
@@ -648,14 +644,14 @@ function submitStudentRequest() {
     return;
   }
   if (!selectedAvailability.size) {
-    setStudentStep(2);
+    setStudentStep(4);
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
     return;
   }
 
   const locations = [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value);
   if (!locations.length) {
-    setStudentStep(4);
+    setStudentStep(6);
     els.studentMessage.textContent = "至少选择一个地点偏好。";
     return;
   }
@@ -772,7 +768,7 @@ function renderDefaultSummary() {
     <div class="default-ready">
       <span>你的默认模板</span>
       <strong>${lines.join("；")}</strong>
-      <small>地点：${routine.locations.join(" / ")}。如果 ${formatWeekRange(currentWeekKey)} 照常，直接点下面的「照默认提交这一周」。</small>
+      <small>地点：${routine.locations.join(" / ")}。如果 ${getWeekRangeLabel()} 照常，直接点下面的「照默认提交这一周」。</small>
     </div>
   `;
   els.routineSetupTitle.textContent = "修改默认安排";
@@ -918,7 +914,7 @@ function renderRequestPreview() {
   on(els.requestPreview.querySelector("[data-edit-submission]"), "click", () => {
     lastSubmittedRequest = null;
     weeklyEditMode = true;
-    setStudentStep(1);
+    setStudentStep(3);
   });
 }
 
@@ -954,7 +950,18 @@ function renderMySchedule() {
   }
   const assignments = state.published.filter((item) => assignmentMatchesStudent(item, name, code));
   if (!assignments.length) {
-    els.mySchedule.innerHTML = `<div class="empty">${weekLabel} 目前还没有发布给这个名字${code ? "和识别码" : ""}的课程。</div>`;
+    const routine = getSavedRoutine();
+    if (hasUsableRoutine(routine)) {
+      const routineText = routine.routine.map((item, index) => `${formatSlot(item.slotKey)} · ${normalizeGoal(item.goal || routine.goals?.[index])}`).join("；");
+      els.mySchedule.innerHTML = `
+        <div class="empty">
+          <strong>${weekLabel} 暂无 Dora 发布的课程。</strong>
+          <span>你已有默认模板：${routineText}。如果这一周照常，下一步可以直接按默认提交。</span>
+        </div>
+      `;
+      return;
+    }
+    els.mySchedule.innerHTML = `<div class="empty">${weekLabel} 目前还没有发布给这个名字${code ? "和识别码" : ""}的课程；下一步可以先设置默认模板。</div>`;
     return;
   }
   els.mySchedule.innerHTML = assignments.map((item) => `
@@ -973,7 +980,7 @@ function assignmentMatchesStudent(assignment, name, code) {
 }
 
 function unlockCoach() {
-  if (els.coachPin.value === getCoachPin()) {
+  if (isValidCoachPin(els.coachPin.value)) {
     els.pinMessage.textContent = "";
     showView("coach");
   } else {
@@ -2173,7 +2180,7 @@ function getWeekStart(date) {
 function getDefaultWeekStart() {
   const today = new Date();
   const day = today.getDay();
-  if (day === 0 || day === 5 || day === 6) return getNextTrainingWeekStart();
+  if (day === 0 || day === 5 || day === 6) return getNextTrainingMonday();
   return getWeekStart(today);
 }
 

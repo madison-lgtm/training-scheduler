@@ -54,18 +54,6 @@
       </section>
 
       <section class="view" id="studentView">
-        <section class="panel my-schedule">
-          <div class="panel-heading">
-            <div>
-              <p class="eyebrow">Confirmed</p>
-              <h2 id="myScheduleTitle">我的选中周安排</h2>
-            </div>
-          </div>
-          <div id="mySchedule" class="my-schedule-list">
-            <div class="empty">输入名字后可以查看选中周已发布给你的课程。</div>
-          </div>
-        </section>
-
         <section class="panel student-card">
           <div class="panel-heading">
             <div>
@@ -83,8 +71,8 @@
             <div class="step-heading">
               <span>1</span>
               <div>
-                <h3>先建立你的默认安排</h3>
-                <p>第一次使用先设置常用时间；之后每周如果照常，就可以一键提交。</p>
+                <h3>先告诉 Dora 你是谁</h3>
+                <p>之后查课和修改申请，都用同一个名字和识别码。</p>
               </div>
             </div>
             <div class="form-grid">
@@ -97,6 +85,37 @@
                 <input id="studentCode" placeholder="比如手机号后四位" />
                 <small>建议用手机号后四位。之后查课、修改申请都用同一个编号；忘了可以问 Dora，她在教练端能帮你查。</small>
               </label>
+            </div>
+          </section>
+
+          <section class="student-step" data-step="1">
+            <div class="step-heading">
+              <span>2</span>
+              <div>
+                <h3>先看这个日期范围有没有课</h3>
+                <p>如果 Dora 已发布，会先显示你的课程；没有发布的话，可以继续提交申请。</p>
+              </div>
+            </div>
+            <section class="my-schedule inline-schedule">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Confirmed</p>
+                  <h2 id="myScheduleTitle">我的选中周安排</h2>
+                </div>
+              </div>
+              <div id="mySchedule" class="my-schedule-list">
+                <div class="empty">输入名字后可以查看选中周已发布给你的课程。</div>
+              </div>
+            </section>
+          </section>
+
+          <section class="student-step" data-step="2">
+            <div class="step-heading">
+              <span>3</span>
+              <div>
+                <h3>默认安排</h3>
+                <p>第一次先设置常用模板；之后每周如果照常，就可以直接提交。</p>
+              </div>
             </div>
             <section class="default-panel" id="defaultPanel">
               <div id="defaultSummary"></div>
@@ -147,9 +166,9 @@
             </section>
           </section>
 
-          <section class="student-step" data-step="1">
+          <section class="student-step" data-step="3">
             <div class="step-heading">
-              <span>2</span>
+              <span>4</span>
               <div>
                 <h3>选中周想上几次</h3>
                 <p>先告诉 Dora 这个日期范围想上几节，下一步再点选你有空的时间。</p>
@@ -173,9 +192,9 @@
             </div>
           </section>
 
-          <section class="student-step" data-step="2">
+          <section class="student-step" data-step="4">
             <div class="step-heading">
-              <span>3</span>
+              <span>5</span>
               <div>
                 <h3>选中周你什么时候有空</h3>
                 <p>点上所有你可以来的时间，Dora 会从里面安排最终课程。</p>
@@ -184,9 +203,9 @@
             <div class="availability-grid" id="availabilityGrid"></div>
           </section>
 
-          <section class="student-step" data-step="3">
+          <section class="student-step" data-step="5">
             <div class="step-heading">
-              <span>4</span>
+              <span>6</span>
               <div>
                 <h3>选中周想练什么</h3>
                 <p>选择这个日期范围想覆盖的训练重点，顺序可以交给 Dora 安排。</p>
@@ -195,9 +214,9 @@
             <div class="goal-picker" id="sessionGoals"></div>
           </section>
 
-          <section class="student-step" data-step="4">
+          <section class="student-step" data-step="6">
             <div class="step-heading">
-              <span>5</span>
+              <span>7</span>
               <div>
                 <h3>地点偏好</h3>
                 <p>可以选一个，也可以两个都选。最终地点由教练统一安排。</p>
@@ -209,9 +228,9 @@
             </div>
           </section>
 
-          <section class="student-step" data-step="5">
+          <section class="student-step" data-step="7">
             <div class="step-heading">
-              <span>6</span>
+              <span>8</span>
               <div>
                 <h3>确认选中周申请</h3>
                 <p>提交后 Dora 会看到这份申请；需要改的话可以回到前面修改。</p>
