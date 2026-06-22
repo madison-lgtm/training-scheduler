@@ -547,6 +547,45 @@ h3 {
   gap: 14px;
 }
 
+.student-card[data-student-step="0"] {
+  width: min(560px, 100%);
+  margin-inline: auto;
+}
+
+.student-card[data-student-step="0"] > .panel-heading,
+.student-card[data-student-step="0"] .student-week-context,
+.student-card[data-student-step="0"] .student-progress-card,
+.student-card[data-student-step="0"] .student-step-tabs,
+.student-card[data-student-step="0"] .submit-row .message {
+  display: none !important;
+}
+
+.student-card[data-student-step="0"] .identity-form {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.student-card[data-student-step="0"] .field span {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.student-card[data-student-step="0"] input {
+  min-height: 64px;
+  border-radius: 18px;
+  font-size: 1.22rem;
+}
+
+.student-card[data-student-step="0"] > .submit-row {
+  justify-content: stretch;
+  margin-top: 16px;
+}
+
+.student-card[data-student-step="0"] #studentNext {
+  width: 100%;
+  min-height: 58px;
+}
+
 .step-heading {
   display: flex;
   align-items: flex-start;
@@ -570,6 +609,160 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #fffafd;
+}
+
+.hidden-panel {
+  display: none;
+}
+
+.student-home-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 2px solid rgba(195, 58, 134, 0.18);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 241, 248, 0.88) 72%, rgba(248, 255, 168, 0.26));
+  box-shadow: 8px 8px 0 rgba(36, 25, 31, 0.08);
+}
+
+.student-home-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+}
+
+.student-home-topline > div {
+  display: grid;
+  gap: 4px;
+}
+
+.student-home-topline span,
+.schedule-home-note span {
+  color: var(--pink);
+  font-size: 0.86rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.student-home-topline small {
+  color: var(--muted);
+  font-weight: 950;
+}
+
+.schedule-home-note {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.schedule-home-note span {
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.schedule-home-note small {
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.schedule-home-state {
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+  border: 1px solid rgba(195, 58, 134, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.schedule-home-state span {
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.schedule-home-state strong {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.schedule-home-state small {
+  color: var(--muted);
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.schedule-home-state.is-confirmed {
+  border-color: rgba(20, 120, 88, 0.22);
+  background: linear-gradient(135deg, #f5fff9, #fff);
+}
+
+.schedule-home-state.is-routine {
+  background: linear-gradient(135deg, #fff1f8, #fffbe9);
+}
+
+.schedule-home-state.is-empty {
+  border-style: dashed;
+}
+
+.schedule-home-items {
+  display: grid;
+  gap: 10px;
+}
+
+.student-more-actions {
+  position: relative;
+  justify-self: end;
+}
+
+.student-more-actions summary {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 106px;
+  padding: 0 14px;
+  border: 1px solid rgba(195, 58, 134, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink);
+  font-weight: 950;
+  cursor: pointer;
+  list-style: none;
+}
+
+.student-more-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.student-more-actions[open] summary {
+  border-color: rgba(195, 58, 134, 0.38);
+  background: #ffe6f2;
+}
+
+.student-more-actions .quick-actions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(270px, calc(100vw - 44px));
+  padding: 10px;
+  border: 1px solid rgba(195, 58, 134, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 8px 8px 0 rgba(36, 25, 31, 0.1);
+  margin-top: 10px;
 }
 
 .default-panel.first-time {
@@ -637,6 +830,25 @@ h3 {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.routine-list {
+  display: grid;
+  gap: 10px;
+}
+
+.routine-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.routine-item.is-hidden {
+  display: none;
+}
+
+.add-routine {
+  width: fit-content;
+}
+
 .routine-section {
   display: grid;
   gap: 8px;
@@ -659,6 +871,16 @@ h3 {
 .weekly-intent {
   grid-template-columns: 180px minmax(0, 1fr);
   margin: 14px 0;
+}
+
+.compact-intent {
+  grid-template-columns: minmax(180px, 260px);
+  margin: 0 0 12px;
+}
+
+.compact-copy {
+  min-height: auto;
+  padding: 11px 12px;
 }
 
 .field {
@@ -2096,4 +2318,53 @@ textarea {
   .empty.compact {
     padding: 12px;
   }
+}
+
+.student-card[data-student-step="0"] > .submit-row {
+  display: block;
+  position: static;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.student-card[data-student-step="0"] #studentNext {
+  display: flex;
+  justify-content: center;
+}
+
+body[data-view="student"][data-student-step="0"] .week-switcher {
+  display: none;
+}
+
+body[data-view="student"][data-student-step="1"] .week-switcher,
+body[data-view="student"][data-student-step="2"] .week-switcher {
+  display: none;
+}
+
+body[data-view="student"] .student-week-context {
+  display: none;
+}
+
+body[data-view="student"] .student-card .week-label {
+  display: none;
+}
+
+body[data-view="student"] .switch-entry,
+body[data-view="coach"] .switch-entry,
+body[data-view="pin"] .switch-entry {
+  align-self: flex-start;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border-color: rgba(36, 25, 31, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 1.35rem;
+}
+
+.home-entry {
+  border-radius: 999px;
 }

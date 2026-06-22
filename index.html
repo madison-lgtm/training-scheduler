@@ -25,7 +25,7 @@
             <button class="ghost" id="thisWeek" type="button">回到本周</button>
           </div>
         </div>
-        <button class="ghost switch-entry" type="button" data-view-target="role">切换入口</button>
+        <button class="ghost switch-entry home-entry" type="button" data-view-target="role" aria-label="返回主页面" title="返回主页面">⌂</button>
       </header>
 
       <section class="view active" id="roleView">
@@ -58,7 +58,7 @@
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Member Space</p>
-              <h2>提交选中周申请</h2>
+              <h2>我的训练</h2>
             </div>
             <span class="week-label" id="studentWeekLabel"></span>
           </div>
@@ -68,158 +68,140 @@
           <div class="student-step-tabs" id="studentStepTabs"></div>
 
           <section class="student-step active" data-step="0">
-            <div class="step-heading">
-              <span>1</span>
-              <div>
-                <h3>先告诉 Dora 你是谁</h3>
-                <p>之后查课和修改申请，都用同一个名字和识别码。</p>
-              </div>
-            </div>
-            <div class="form-grid">
+            <div class="form-grid identity-form">
               <label class="field">
                 <span>名字或昵称</span>
                 <input id="studentName" placeholder="比如：苏" />
               </label>
               <label class="field">
-                <span>识别码（建议填）</span>
+                <span>识别码</span>
                 <input id="studentCode" placeholder="比如手机号后四位" />
-                <small>建议用手机号后四位。之后查课、修改申请都用同一个编号；忘了可以问 Dora，她在教练端能帮你查。</small>
               </label>
             </div>
           </section>
 
           <section class="student-step" data-step="1">
-            <div class="step-heading">
-              <span>2</span>
-              <div>
-                <h3>先看这个日期范围有没有课</h3>
-                <p>如果 Dora 已发布，会先显示你的课程；没有发布的话，可以继续提交申请。</p>
-              </div>
-            </div>
-            <section class="my-schedule inline-schedule">
-              <div class="panel-heading">
+            <section class="student-home-card">
+              <div class="student-home-topline">
                 <div>
-                  <p class="eyebrow">Confirmed</p>
-                  <h2 id="myScheduleTitle">我的选中周安排</h2>
+                  <span id="myScheduleTitle">本周</span>
+                  <small id="studentHomeWeek"></small>
                 </div>
+                <details class="student-more-actions" id="studentMoreActions">
+                  <summary>更多操作</summary>
+                  <div class="quick-actions" id="weeklyQuickActions">
+                    <button class="primary" id="editDefaultRoutine" type="button">设置常用安排</button>
+                    <button class="ghost" id="customizeWeek" type="button">特殊情况调整</button>
+                  </div>
+                </details>
               </div>
               <div id="mySchedule" class="my-schedule-list">
-                <div class="empty">输入名字后可以查看选中周已发布给你的课程。</div>
+                <div class="empty">输入名字后可以查看你的训练安排。</div>
               </div>
+            </section>
+            <section class="default-panel hidden-panel" id="defaultPanel" aria-hidden="true">
+              <div id="defaultSummary"></div>
             </section>
           </section>
 
           <section class="student-step" data-step="2">
-            <div class="step-heading">
-              <span>3</span>
-              <div>
-                <h3>默认安排</h3>
-                <p>第一次先设置常用模板；之后每周如果照常，就可以直接提交。</p>
+            <section class="routine-box" id="routineSetupPanel">
+              <h3 id="routineSetupTitle">常用安排</h3>
+              <div class="routine-section">
+                <span>固定时间和内容</span>
+                <div class="routine-list" id="routineList">
+                  <div class="routine-item" data-routine-index="0">
+                    <label class="field">
+                      <span>常用时间</span>
+                      <select class="routine-slot-select" id="routineOne"></select>
+                    </label>
+                    <label class="field">
+                      <span>内容</span>
+                      <select class="routine-goal-select" id="routineGoalOne"></select>
+                    </label>
+                  </div>
+                  <div class="routine-item is-hidden" data-routine-index="1">
+                    <label class="field">
+                      <span>常用时间</span>
+                      <select class="routine-slot-select" id="routineTwo"></select>
+                    </label>
+                    <label class="field">
+                      <span>内容</span>
+                      <select class="routine-goal-select" id="routineGoalTwo"></select>
+                    </label>
+                  </div>
+                  <div class="routine-item is-hidden" data-routine-index="2">
+                    <label class="field">
+                      <span>常用时间</span>
+                      <select class="routine-slot-select" id="routineThree"></select>
+                    </label>
+                    <label class="field">
+                      <span>内容</span>
+                      <select class="routine-goal-select" id="routineGoalThree"></select>
+                    </label>
+                  </div>
+                  <div class="routine-item is-hidden" data-routine-index="3">
+                    <label class="field">
+                      <span>常用时间</span>
+                      <select class="routine-slot-select" id="routineFour"></select>
+                    </label>
+                    <label class="field">
+                      <span>内容</span>
+                      <select class="routine-goal-select" id="routineGoalFour"></select>
+                    </label>
+                  </div>
+                </div>
+                <button class="ghost add-routine" id="addRoutineSlot" type="button">＋ 添加常用时间</button>
               </div>
-            </div>
-            <section class="default-panel" id="defaultPanel">
-              <div id="defaultSummary"></div>
-              <section class="routine-box" id="routineSetupPanel">
-                <div>
-                  <h3 id="routineSetupTitle">第一次先设置默认安排</h3>
-                  <p id="routineSetupCopy">选你平常最常上的时间、内容和地点。保存后，以后每周如果照常就可以一键提交。</p>
+              <div class="routine-section">
+                <span>地点偏好（可多选）</span>
+                <div class="choice-row">
+                  <label class="check-pill"><input type="checkbox" name="routineLocation" value="235 Grand" />235 Grand</label>
+                  <label class="check-pill"><input type="checkbox" name="routineLocation" value="Bisby" />Bisby</label>
                 </div>
-                <div class="routine-section">
-                  <span>平常固定时间</span>
-                  <div class="routine-grid">
-                    <label class="field">
-                      <span>默认时间 1</span>
-                      <select id="routineOne"></select>
-                    </label>
-                    <label class="field">
-                      <span>默认内容 1</span>
-                      <select id="routineGoalOne"></select>
-                    </label>
-                    <label class="field">
-                      <span>默认时间 2</span>
-                      <select id="routineTwo"></select>
-                    </label>
-                    <label class="field">
-                      <span>默认内容 2</span>
-                      <select id="routineGoalTwo"></select>
-                    </label>
-                  </div>
-                </div>
-                <div class="routine-section">
-                  <span>默认地点偏好</span>
-                  <div class="choice-row">
-                    <label class="check-pill"><input type="checkbox" name="routineLocation" value="235 Grand" />235 Grand</label>
-                    <label class="check-pill"><input type="checkbox" name="routineLocation" value="Bisby" />Bisby</label>
-                  </div>
-                </div>
-                <div class="routine-save-row">
-                  <button class="primary" id="saveDefaultRoutine" type="button">保存默认模板</button>
-                  <small>这里只是保存常用模板；还不会提交给 Dora。</small>
-                </div>
-              </section>
-              <div class="quick-actions" id="weeklyQuickActions">
-                <p>这周怎么处理？</p>
-                <button class="primary" id="useDefaultWeek" type="button">照默认提交这一周</button>
-                <button class="ghost" id="editDefaultRoutine" type="button">修改默认模板</button>
-                <button class="ghost" id="customizeWeek" type="button">这周临时改</button>
               </div>
             </section>
           </section>
 
           <section class="student-step" data-step="3">
             <div class="step-heading">
-              <span>4</span>
+              <span>1</span>
               <div>
-                <h3>选中周想上几次</h3>
-                <p>先告诉 Dora 这个日期范围想上几节，下一步再点选你有空的时间。</p>
-              </div>
-            </div>
-            <div class="weekly-intent">
-              <label class="field">
-                <span>选中周想上几次</span>
-                <input id="sessionCount" type="hidden" value="1" />
-                <div class="count-options" id="sessionCountOptions">
-                  <button class="active" type="button" data-session-count="1">1 次</button>
-                  <button type="button" data-session-count="2">2 次</button>
-                  <button type="button" data-session-count="3">3 次</button>
-                  <button type="button" data-session-count="4">4 次+</button>
-                </div>
-              </label>
-              <div class="intent-copy">
-                <strong>有空时间 ≠ 训练次数</strong>
-                <span>如果 8 个时间都有空，但只想上 1 节，就填 1，再把有空的时间都点上。</span>
-              </div>
-            </div>
-          </section>
-
-          <section class="student-step" data-step="4">
-            <div class="step-heading">
-              <span>5</span>
-              <div>
-                <h3>选中周你什么时候有空</h3>
-                <p>点上所有你可以来的时间，Dora 会从里面安排最终课程。</p>
+                <h3>有空时间</h3>
+                <p>尽量多选，会更好安排。</p>
               </div>
             </div>
             <div class="availability-grid" id="availabilityGrid"></div>
           </section>
 
-          <section class="student-step" data-step="5">
+          <section class="student-step" data-step="4">
             <div class="step-heading">
-              <span>6</span>
+              <span>2</span>
               <div>
-                <h3>选中周想练什么</h3>
-                <p>选择这个日期范围想覆盖的训练重点，顺序可以交给 Dora 安排。</p>
+                <h3>想上几次 / 想练什么</h3>
               </div>
+            </div>
+            <div class="weekly-intent compact-intent">
+              <label class="field">
+                <span>想上几次</span>
+                <input id="sessionCount" type="hidden" value="1" />
+                <select id="sessionCountOptions">
+                  <option value="1">1 次</option>
+                  <option value="2">2 次</option>
+                  <option value="3">3 次</option>
+                  <option value="4">4 次+</option>
+                </select>
+              </label>
             </div>
             <div class="goal-picker" id="sessionGoals"></div>
           </section>
 
-          <section class="student-step" data-step="6">
+          <section class="student-step" data-step="5">
             <div class="step-heading">
-              <span>7</span>
+              <span>3</span>
               <div>
                 <h3>地点偏好</h3>
-                <p>可以选一个，也可以两个都选。最终地点由教练统一安排。</p>
+                <p>可多选。</p>
               </div>
             </div>
             <div class="choice-row">
@@ -228,17 +210,17 @@
             </div>
           </section>
 
-          <section class="student-step" data-step="7">
+          <section class="student-step" data-step="6">
             <div class="step-heading">
-              <span>8</span>
+              <span>4</span>
               <div>
-                <h3>确认选中周申请</h3>
+                <h3>确认调整</h3>
                 <p>提交后 Dora 会看到这份申请；需要改的话可以回到前面修改。</p>
               </div>
             </div>
             <div id="requestPreview"></div>
             <label class="field">
-              <span>选中周备注</span>
+              <span>备注</span>
               <textarea id="studentNotes" placeholder="比如：这一周出差，周三不行；训练内容希望上下肢交替。"></textarea>
             </label>
           </section>
@@ -247,6 +229,7 @@
             <div id="studentMessage" class="message"></div>
             <button class="ghost" id="studentPrev" type="button">上一步</button>
             <button class="ghost" id="studentNext" type="button">下一步</button>
+            <button class="primary" id="saveDefaultRoutine" type="button">保存常用安排</button>
             <button class="primary" id="submitRequest">提交给 Dora</button>
           </div>
         </section>
@@ -399,7 +382,7 @@
             <aside class="panel student-rail">
               <div class="rail-heading">
                 <h3>学员状态</h3>
-                <span id="requestCount">0 人提交</span>
+                <span id="requestCount">0 人可排</span>
               </div>
               <p class="muted compact-copy">这里会显示每位会员的识别码；如果会员忘记了，可以复制后发给她。</p>
               <div id="studentSummary"></div>
