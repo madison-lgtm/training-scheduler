@@ -256,13 +256,10 @@
           <div>
             <p class="eyebrow">Dora Studio</p>
             <h2>训练周工作台</h2>
-            <p class="muted">先查看已有安排，需要修改时再进入操作台。</p>
-            <p class="coach-week-context" id="coachWeekContext"></p>
           </div>
           <details class="coach-actions">
             <summary>本周操作</summary>
             <div class="coach-action-menu">
-              <p class="menu-hint">一般顺序：先生成草案，调整后发布；需要放进日历时再导出。</p>
               <button class="ghost" id="generateDraft" type="button">
                 <strong>生成草案</strong>
                 <span id="generateDraftCopy">根据选中周申请自动排一版</span>
@@ -313,64 +310,56 @@
 
         <section class="coach-page" id="coachWorkbenchPage">
           <section class="coach-mobile-panel">
-            <section class="panel mobile-today">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">手机操作</p>
-                  <h2>按天操作</h2>
-                </div>
-              </div>
+            <details class="coach-mobile-card mobile-issues-card" open>
+              <summary>
+                <span>需要 Dora 看一下</span>
+                <b id="mobileIssueCount">0</b>
+              </summary>
+              <div id="mobileCoachIssues"></div>
+            </details>
+
+            <details class="coach-mobile-card mobile-schedule-card" open>
+              <summary>
+                <span>这周排课</span>
+                <b>按天看</b>
+              </summary>
               <div class="mobile-day-tabs" id="mobileDayTabs"></div>
               <div id="mobileCoachDay"></div>
-            </section>
+            </details>
 
-            <section class="panel mobile-unassigned-panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">待安排</p>
-                  <h2>还没安排的申请</h2>
-                </div>
-              </div>
-              <p class="muted compact-copy">这些课已经提交给 Dora，但还没排到具体时间。点一个申请，再点上方时间格安排进去。</p>
+            <details class="coach-mobile-card mobile-unassigned-panel">
+              <summary>
+                <span>未排入课表</span>
+                <b id="mobileUnassignedCount">0</b>
+              </summary>
               <div id="mobileUnassignedPool" class="mobile-pool"></div>
-            </section>
-
-            <section class="panel mobile-issues">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">提醒</p>
-                  <h2>需要 Dora 看一下</h2>
-                </div>
-              </div>
-              <div id="mobileCoachIssues"></div>
-            </section>
+            </details>
           </section>
 
           <section class="workbench">
             <section class="panel calendar-panel">
               <div class="workbench-hint">
-                <strong>手机也可以调整</strong>
-                <span>先点学员名字，再点目标时间格；电脑上也可以直接拖拽。</span>
+                <strong>点名字，再点时间格</strong>
+                <span>电脑上也可以直接拖拽。</span>
               </div>
               <div class="status-legend" aria-label="排课状态说明">
-                <span><i class="legend-dot review"></i>Dora 看一下：地点或拼课需要教练判断</span>
-                <span><i class="legend-dot error"></i>需要调整：现在不能直接这样排</span>
-                <span><i class="legend-dot selected"></i>已确定：可以照这个上课</span>
+                <span><i class="legend-dot review"></i>Dora 看一下</span>
+                <span><i class="legend-dot error"></i>需要调整</span>
+                <span><i class="legend-dot selected"></i>已确定</span>
               </div>
               <div class="location-row" id="locationRow"></div>
               <div class="coach-calendar" id="coachCalendar"></div>
               <section class="holding-pool">
-                <h3>还没安排的申请</h3>
-                <p class="muted compact-copy">这些课已经提交给 Dora，但还没排到具体时间。可以点一个名字，再点上方时间格安排进去。</p>
+                <h3>未排入课表</h3>
                 <div id="unassignedPool" class="pool-items"></div>
               </section>
             </section>
 
             <aside class="panel detail-panel">
               <span class="issue-state" id="issueState">先点提醒格</span>
-              <p class="eyebrow">点中格子的提醒</p>
+              <p class="eyebrow">Reminder</p>
               <h3 id="issueTitle">点带标签的格子看原因</h3>
-              <p id="issueText" class="problem muted">系统会在这里解释为什么需要确认，以及 Dora 可以怎么处理。</p>
+              <p id="issueText" class="problem muted">这里会显示原因和建议。</p>
               <div id="issueRecommendation"></div>
               <button class="primary full" id="applyRecommendation" disabled>应用推荐</button>
             </aside>

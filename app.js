@@ -137,7 +137,9 @@ const els = {
   mobileDayTabs: document.querySelector("#mobileDayTabs"),
   mobileCoachDay: document.querySelector("#mobileCoachDay"),
   mobileUnassignedPool: document.querySelector("#mobileUnassignedPool"),
+  mobileUnassignedCount: document.querySelector("#mobileUnassignedCount"),
   mobileCoachIssues: document.querySelector("#mobileCoachIssues"),
+  mobileIssueCount: document.querySelector("#mobileIssueCount"),
   studentSummary: document.querySelector("#studentSummary"),
   coachNotesList: document.querySelector("#coachNotesList"),
   locationRow: document.querySelector("#locationRow"),
@@ -393,12 +395,12 @@ function renderWeekLabels() {
     `;
   }
   if (els.coachWeekContext) {
-    els.coachWeekContext.textContent = `当前工作周：${label}`;
+    els.coachWeekContext.textContent = label;
   }
-  if (els.seedDemoCopy) els.seedDemoCopy.textContent = `把测试数据放进 ${label}`;
-  if (els.generateDraftCopy) els.generateDraftCopy.textContent = `根据 ${label} 的常用安排和临时申请自动排一版`;
+  if (els.seedDemoCopy) els.seedDemoCopy.textContent = "放入一组测试数据";
+  if (els.generateDraftCopy) els.generateDraftCopy.textContent = "按常用安排和临时申请自动排一版";
   const exportLabel = els.exportCalendar?.querySelector("strong");
-  if (exportLabel) exportLabel.textContent = `导出 ${label} 日历`;
+  if (exportLabel) exportLabel.textContent = "导出日历";
 }
 
 function renderStudentSteps() {
@@ -1290,12 +1292,12 @@ function renderCoach() {
 function renderCoachScheduleOverview() {
   const isPublished = state.published.length > 0;
   const assignments = isPublished ? state.published : state.draft.assignments;
-  els.coachScheduleTitle.textContent = `${isPublished ? "已发布安排" : "草案预览"} · ${getWeekRangeLabel()}`;
+  els.coachScheduleTitle.textContent = isPublished ? "已发布安排" : "草案预览";
 
   if (!assignments.length) {
     els.coachScheduleOverview.innerHTML = `
       <div class="empty">
-        还没有可查看的安排。可以先去「调整排课」生成草案。
+        还没有安排。可以去「调整排课」生成草案。
       </div>
     `;
     return;
@@ -1352,6 +1354,16 @@ function renderMobileCoach() {
   renderMobileDay();
   renderMobileUnassigned();
   renderMobileIssues();
+  syncMobileCoachCards();
+}
+
+function syncMobileCoachCards() {
+  const issueCard = document.querySelector(".mobile-issues-card");
+  const scheduleCard = document.querySelector(".mobile-schedule-card");
+  if (issueCard && scheduleCard) {
+    issueCard.open = state.draft.issues.length > 0;
+    scheduleCard.open = state.draft.issues.length === 0;
+  }
 }
 
 function renderMobileDayTabs() {
@@ -1411,12 +1423,21 @@ function renderMobileDay() {
       selectMoveSource("assignment", button.dataset.mobileAssignmentId);
     });
   });
+
+  els.mobileCoachDay.querySelectorAll("[data-mobile-assignment-goal]").forEach((select) => {
+    select.addEventListener("click", (event) => event.stopPropagation());
+    select.addEventListener("change", (event) => {
+      event.stopPropagation();
+      updateAssignmentGoal(select.dataset.mobileAssignmentGoal, select.value);
+    });
+  });
 }
 
 function renderMobileUnassigned() {
   if (!els.mobileUnassignedPool) return;
+  if (els.mobileUnassignedCount) els.mobileUnassignedCount.textContent = String(state.draft.unassigned.length);
   if (!state.draft.unassigned.length) {
-    els.mobileUnassignedPool.innerHTML = `<div class="empty compact">所有申请都已经排进日历。</div>`;
+    els.mobileUnassignedPool.innerHTML = `<div class="empty compact">没有未安排的申请。</div>`;
     return;
   }
   els.mobileUnassignedPool.innerHTML = state.draft.unassigned.map((item) => `
@@ -1444,7 +1465,14 @@ function renderMobileSlot(slotKey, dayAssignments) {
         <span>${formatLocation(state.draft.dayLocations[getDayId(slotKey)])}</span>
       </div>
       <div class="mobile-people">
-        ${assignments.length ? assignments.map((item) => `<button class="${selectedMove?.type === "assignment" && selectedMove.id === item.id ? "selected" : ""}" type="button" data-mobile-assignment-id="${item.id}">${item.name} · ${item.goal}</button>`).join("") : "<span>空</span>"}
+        ${assignments.length ? assignments.map((item) => `
+          <div class="mobile-assignment-chip ${selectedMove?.type === "assignment" && selectedMove.id === item.id ? "selected" : ""}">
+            <button type="button" data-mobile-assignment-id="${item.id}">${item.name}</button>
+            <select data-mobile-assignment-goal="${item.id}" aria-label="修改 ${escapeAttribute(item.name)} 的训练内容">
+              ${renderGoalOptions(item.goal)}
+            </select>
+          </div>
+        `).join("") : "<span>空</span>"}
       </div>
     </article>
   `;
@@ -1453,8 +1481,9 @@ function renderMobileSlot(slotKey, dayAssignments) {
 function renderMobileIssues() {
   if (!els.mobileCoachIssues) return;
   const issues = state.draft.issues.slice(0, 5);
+  if (els.mobileIssueCount) els.mobileIssueCount.textContent = String(state.draft.issues.length);
   if (!issues.length) {
-    els.mobileCoachIssues.innerHTML = `<div class="empty compact">暂无待处理问题。</div>`;
+    els.mobileCoachIssues.innerHTML = `<div class="empty compact">暂无提醒。</div>`;
     return;
   }
   els.mobileCoachIssues.innerHTML = issues.map((issue) => `
@@ -1620,6 +1649,14 @@ function renderCoachCalendar() {
       selectMoveSource("assignment", chip.dataset.assignmentId);
     });
   });
+
+  els.coachCalendar.querySelectorAll("[data-assignment-goal]").forEach((select) => {
+    select.addEventListener("click", (event) => event.stopPropagation());
+    select.addEventListener("change", (event) => {
+      event.stopPropagation();
+      updateAssignmentGoal(select.dataset.assignmentGoal, select.value);
+    });
+  });
 }
 
 function renderSlot(slotKey) {
@@ -1631,7 +1668,14 @@ function renderSlot(slotKey) {
     <article class="slot ${className}" data-slot-key="${slotKey}">
       ${statusLabel ? `<span class="slot-status ${issue.severity}">${statusLabel}</span>` : ""}
       <div class="people">
-        ${assignments.map((item) => `<button class="person-chip ${selectedMove?.type === "assignment" && selectedMove.id === item.id ? "selected" : ""}" draggable="true" data-assignment-id="${item.id}">${item.name}</button>`).join("")}
+        ${assignments.map((item) => `
+          <div class="assignment-chip ${selectedMove?.type === "assignment" && selectedMove.id === item.id ? "selected" : ""}" draggable="true" data-assignment-id="${item.id}">
+            <button class="person-chip" type="button">${item.name}</button>
+            <select class="assignment-goal-select" data-assignment-goal="${item.id}" aria-label="修改 ${escapeAttribute(item.name)} 的训练内容">
+              ${renderGoalOptions(item.goal)}
+            </select>
+          </div>
+        `).join("")}
         ${assignments.length < CAPACITY ? `<span class="drop-chip">还可加 ${CAPACITY - assignments.length} 人</span>` : ""}
       </div>
       <strong>${assignments.map((item) => item.goal).join(" / ") || "空"}</strong>
@@ -1640,9 +1684,24 @@ function renderSlot(slotKey) {
   `;
 }
 
+function renderGoalOptions(selectedGoal) {
+  return GOALS.map((goal) => `
+    <option value="${escapeAttribute(goal)}" ${normalizeGoal(selectedGoal) === goal ? "selected" : ""}>${goal}</option>
+  `).join("");
+}
+
+function updateAssignmentGoal(assignmentId, goal) {
+  const assignment = state.draft.assignments.find((item) => item.id === assignmentId);
+  if (!assignment) return;
+  assignment.goal = normalizeGoal(goal);
+  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+  saveState();
+  renderCoach();
+}
+
 function renderUnassigned() {
   if (!state.draft.unassigned.length) {
-    els.unassignedPool.innerHTML = `<span class="muted">所有申请都已经排进上面的时间格。</span>`;
+    els.unassignedPool.innerHTML = `<span class="muted">没有未安排的申请。</span>`;
     return;
   }
   els.unassignedPool.innerHTML = state.draft.unassigned.map((item) => `
@@ -1666,7 +1725,7 @@ function renderIssue(issue, options = { focus: true }) {
   if (!issue) {
     if (els.issueState) els.issueState.textContent = "先点提醒格";
     els.issueTitle.textContent = "没有选中问题";
-    els.issueText.textContent = "点击标着“Dora 看一下”或“需要调整”的格子，这里会解释原因和建议。";
+    els.issueText.textContent = "点黄色或红色格子看原因。";
     els.issueRecommendation.innerHTML = "";
     els.applyRecommendation.disabled = true;
     focusIssuePanel(false, false);

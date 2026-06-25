@@ -104,18 +104,6 @@ h1 {
   font-weight: 900;
 }
 
-.coach-week-context {
-  width: fit-content;
-  margin-top: 8px;
-  padding: 6px 10px;
-  border: 1px solid rgba(195, 58, 134, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.84);
-  color: var(--green);
-  font-size: 0.86rem;
-  font-weight: 950;
-}
-
 .sync-status.cloud {
   border-color: rgba(20, 120, 88, 0.22);
   background: var(--green-soft);
@@ -1334,11 +1322,11 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 10px;
-  padding: 10px 12px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
   border: 1px solid rgba(195, 58, 134, 0.18);
-  border-radius: 12px;
-  background: linear-gradient(135deg, #fff7fb, #f8fff5);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .workbench-hint strong {
@@ -1356,7 +1344,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 900;
@@ -1612,6 +1600,24 @@ textarea {
   gap: 6px;
 }
 
+.assignment-chip {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  border: 1px solid rgba(23, 26, 24, 0.14);
+  border-radius: 999px;
+  background: #fff;
+  cursor: grab;
+}
+
+.assignment-chip.selected {
+  border-color: var(--ink);
+  background: linear-gradient(120deg, #d23f91, #ff7bb8 62%, #f7ef78);
+  box-shadow: 4px 5px 0 rgba(36, 25, 31, 0.82);
+}
+
 .person-chip,
 .drop-chip,
 .pool-items button {
@@ -1629,6 +1635,12 @@ textarea {
   border: 1px solid rgba(23, 26, 24, 0.14);
   background: #fff;
   color: var(--ink);
+}
+
+.assignment-chip .person-chip {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .person-chip {
@@ -1655,6 +1667,19 @@ textarea {
   border: 1px dashed rgba(20, 120, 88, 0.35);
   background: var(--green-soft);
   color: var(--green);
+}
+
+.assignment-goal-select {
+  width: auto;
+  min-width: 88px;
+  min-height: 26px;
+  padding: 0 22px 0 8px;
+  border-color: rgba(202, 59, 137, 0.22);
+  border-radius: 999px;
+  background-color: #fff2f7;
+  color: var(--pink);
+  font-size: 0.78rem;
+  font-weight: 950;
 }
 
 .holding-pool {
@@ -2110,6 +2135,69 @@ textarea {
     margin-bottom: 10px;
   }
 
+  .coach-mobile-card {
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 8px 8px 0 rgba(202, 59, 137, 0.08);
+    overflow: hidden;
+  }
+
+  .coach-mobile-card summary {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 14px;
+    list-style: none;
+    cursor: pointer;
+    font-weight: 950;
+  }
+
+  .coach-mobile-card summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .coach-mobile-card summary::after {
+    content: "⌄";
+    font-size: 0.95rem;
+  }
+
+  .coach-mobile-card[open] summary::after {
+    content: "⌃";
+  }
+
+  .coach-mobile-card summary b {
+    min-width: 30px;
+    min-height: 30px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0 9px;
+    border-radius: 999px;
+    background: var(--lime);
+    color: var(--ink);
+    font-size: 0.82rem;
+  }
+
+  .coach-mobile-card > :not(summary) {
+    padding: 0 12px 12px;
+  }
+
+  .mobile-issues-card[open] {
+    border-color: rgba(202, 59, 137, 0.28);
+  }
+
+  .mobile-schedule-card[open] {
+    border-color: rgba(20, 120, 88, 0.2);
+  }
+
+  .mobile-schedule-card,
+  .mobile-unassigned-panel {
+    display: none;
+  }
+
   .workbench {
     display: block;
   }
@@ -2119,7 +2207,17 @@ textarea {
   }
 
   .calendar-panel {
-    display: none;
+    display: block;
+    margin-top: 10px;
+    overflow-x: auto;
+  }
+
+  .calendar-panel .panel-heading,
+  .workbench-hint,
+  .status-legend,
+  .location-row,
+  .coach-calendar {
+    min-width: 720px;
   }
 
   .student-rail,
@@ -2230,7 +2328,19 @@ textarea {
     font-weight: 900;
   }
 
-  .mobile-people button {
+  .mobile-assignment-chip {
+    display: inline-grid;
+    grid-template-columns: auto minmax(104px, 1fr);
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+    border: 1px solid rgba(36, 25, 31, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  .mobile-people button,
+  .mobile-assignment-chip select {
     min-height: 32px;
     padding: 0 10px;
     border: 1px solid rgba(36, 25, 31, 0.16);
@@ -2239,7 +2349,20 @@ textarea {
     font-weight: 950;
   }
 
-  .mobile-people button.selected,
+  .mobile-assignment-chip button {
+    border: 0;
+    background: transparent;
+  }
+
+  .mobile-assignment-chip select {
+    min-width: 104px;
+    padding-right: 24px;
+    border-color: rgba(202, 59, 137, 0.22);
+    background: #fff2f7;
+    color: var(--pink);
+  }
+
+  .mobile-assignment-chip.selected,
   .mobile-pool button.selected {
     border-color: rgba(36, 25, 31, 0.55);
     background: linear-gradient(120deg, #f0479d, #ff9ec9 58%, #efff68);
