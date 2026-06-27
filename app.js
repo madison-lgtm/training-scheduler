@@ -32,7 +32,7 @@ document.addEventListener("click", (event) => {
       if (message) message.textContent = "";
       navigateView("coach");
     } else if (message) {
-      message.textContent = "PIN 不对。可以请 Dora 确认当前 PIN。";
+      message.textContent = "PIN 不对。如果忘记了，请联系小黄去云端找回。";
     }
   }
 });
@@ -65,6 +65,7 @@ let cloudSaveTimer = null;
 let applyingRemoteState = false;
 let selectedMobileDay = getTodayDayId();
 let selectedCoachPage = "schedule";
+let manualCourseSlotKey = null;
 
 const els = {
   syncStatus: document.querySelector("#syncStatus"),
@@ -74,6 +75,7 @@ const els = {
   pinView: document.querySelector("#pinView"),
   coachView: document.querySelector("#coachView"),
   coachActions: document.querySelector(".coach-actions"),
+  studentMoreActions: document.querySelector("#studentMoreActions"),
   roleStudent: document.querySelector("#roleStudent"),
   roleCoach: document.querySelector("#roleCoach"),
   prevWeek: document.querySelector("#prevWeek"),
@@ -121,13 +123,12 @@ const els = {
   coachSchedulePage: document.querySelector("#coachSchedulePage"),
   coachWorkbenchPage: document.querySelector("#coachWorkbenchPage"),
   coachPeoplePage: document.querySelector("#coachPeoplePage"),
+  coachPinPage: document.querySelector("#coachPinPage"),
+  pinManagerAction: document.querySelector("#pinManagerAction"),
+  backToPeopleFromPin: document.querySelector("#backToPeopleFromPin"),
   coachScheduleTitle: document.querySelector("#coachScheduleTitle"),
   coachWeekContext: document.querySelector("#coachWeekContext"),
   coachScheduleOverview: document.querySelector("#coachScheduleOverview"),
-  seedDemo: document.querySelector("#seedDemo"),
-  seedDemoCopy: document.querySelector("#seedDemoCopy"),
-  generateDraft: document.querySelector("#generateDraft"),
-  generateDraftCopy: document.querySelector("#generateDraftCopy"),
   exportCalendar: document.querySelector("#exportCalendar"),
   newCoachPin: document.querySelector("#newCoachPin"),
   saveCoachPin: document.querySelector("#saveCoachPin"),
@@ -141,9 +142,9 @@ const els = {
   mobileCoachIssues: document.querySelector("#mobileCoachIssues"),
   mobileIssueCount: document.querySelector("#mobileIssueCount"),
   studentSummary: document.querySelector("#studentSummary"),
-  coachNotesList: document.querySelector("#coachNotesList"),
   locationRow: document.querySelector("#locationRow"),
   coachCalendar: document.querySelector("#coachCalendar"),
+  clearDraftSchedule: document.querySelector("#clearDraftSchedule"),
   unassignedPool: document.querySelector("#unassignedPool"),
   issueTitle: document.querySelector("#issueTitle"),
   issueState: document.querySelector("#issueState"),
@@ -152,6 +153,14 @@ const els = {
   detailPanel: document.querySelector(".detail-panel"),
   applyRecommendation: document.querySelector("#applyRecommendation"),
   requestPreview: document.querySelector("#requestPreview"),
+  manualCourseModal: document.querySelector("#manualCourseModal"),
+  manualCourseTitle: document.querySelector("#manualCourseTitle"),
+  manualCourseName: document.querySelector("#manualCourseName"),
+  manualCourseGoal: document.querySelector("#manualCourseGoal"),
+  manualCourseLocation: document.querySelector("#manualCourseLocation"),
+  manualCourseMessage: document.querySelector("#manualCourseMessage"),
+  cancelManualCourse: document.querySelector("#cancelManualCourse"),
+  saveManualCourse: document.querySelector("#saveManualCourse"),
 };
 
 bootApp();
@@ -205,8 +214,14 @@ function bindEvents() {
   on(els.studentNext, "click", () => setStudentStep(currentStudentStep + 1));
   on(els.saveDefaultRoutine, "click", saveDefaultRoutine);
   on(els.addRoutineSlot, "click", showNextRoutineRow);
-  on(els.editDefaultRoutine, "click", openDefaultRoutineEditor);
-  on(els.customizeWeek, "click", startWeeklyEdit);
+  on(els.editDefaultRoutine, "click", () => {
+    closeActionMenus();
+    openDefaultRoutineEditor();
+  });
+  on(els.customizeWeek, "click", () => {
+    closeActionMenus();
+    startWeeklyEdit();
+  });
   on(els.submitRequest, "click", submitStudentRequest);
   on(els.studentName, "input", () => {
     loadRoutineForName();
@@ -218,20 +233,73 @@ function bindEvents() {
     renderDefaultSummary();
     renderMySchedule();
   });
-  on(els.seedDemo, "click", () => runCoachAction(seedDemo));
-  on(els.generateDraft, "click", () => runCoachAction(generateDraft));
+  if (els.studentSummary) {
+    els.studentSummary.addEventListener("click", handleStudentSummaryClick, true);
+  }
   on(els.exportCalendar, "click", () => runCoachAction(exportCalendar));
+  on(els.clearDraftSchedule, "click", clearDraftSchedule);
+  on(els.pinManagerAction, "click", () => {
+    closeCoachActions();
+    setCoachPage("pin");
+  });
+  on(els.backToPeopleFromPin, "click", () => setCoachPage("people"));
   on(els.saveCoachPin, "click", saveCoachPin);
   on(els.publishSchedule, "click", () => runCoachAction(publishSchedule));
   on(els.applyRecommendation, "click", applyRecommendation);
+  on(els.cancelManualCourse, "click", closeManualCourseModal);
+  on(els.saveManualCourse, "click", saveManualCourse);
+  on(els.manualCourseModal, "click", (event) => {
+    if (event.target === els.manualCourseModal) closeManualCourseModal();
+  });
+  document.addEventListener("click", handleManualAddClick, true);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && els.manualCourseModal && !els.manualCourseModal.hidden) closeManualCourseModal();
+  });
+  setupCoachActionMenu();
 }
 
 function on(element, eventName, handler) {
   if (element) element.addEventListener(eventName, handler);
 }
 
-function runCoachAction(action) {
+function setupCoachActionMenu() {
+  const actionMenus = [els.coachActions, els.studentMoreActions].filter(Boolean);
+  if (!actionMenus.length) return;
+  document.addEventListener("click", (event) => {
+    actionMenus.forEach((menu) => {
+      if (!menu.open || menu.contains(event.target)) return;
+      menu.open = false;
+    });
+  });
+  document.addEventListener("focusin", (event) => {
+    actionMenus.forEach((menu) => {
+      if (!menu.open || menu.contains(event.target)) return;
+      menu.open = false;
+    });
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    actionMenus.forEach((menu) => {
+      menu.open = false;
+    });
+  });
+}
+
+function closeCoachActions() {
   if (els.coachActions) els.coachActions.open = false;
+}
+
+function handleManualAddClick(event) {
+  const button = event.target.closest("[data-manual-add], [data-mobile-manual-add]");
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const slotKey = button.dataset.manualAdd || button.dataset.mobileManualAdd;
+  if (slotKey) openManualCoursePrompt(slotKey);
+}
+
+function runCoachAction(action) {
+  closeCoachActions();
   action();
 }
 
@@ -257,7 +325,7 @@ function saveCoachPin() {
 
 function fillSelects() {
   const slotOptions = [`<option value="">不设置</option>`].concat(
-    allSlotKeys().map((slotKey) => `<option value="${slotKey}">${formatSlot(slotKey)}</option>`),
+    allSlotKeys().map((slotKey) => `<option value="${slotKey}">${formatSlotLabel(slotKey)}</option>`),
   ).join("");
   document.querySelectorAll(".routine-slot-select").forEach((select) => {
     select.innerHTML = slotOptions;
@@ -298,7 +366,7 @@ function showView(name) {
 }
 
 function setCoachPage(page) {
-  if (!["schedule", "workbench", "people"].includes(page)) page = "schedule";
+  if (!["schedule", "workbench", "people", "pin"].includes(page)) page = "schedule";
   selectedCoachPage = page;
   els.coachScheduleTab.classList.toggle("active", page === "schedule");
   els.coachWorkbenchTab.classList.toggle("active", page === "workbench");
@@ -306,6 +374,7 @@ function setCoachPage(page) {
   els.coachSchedulePage.classList.toggle("active", page === "schedule");
   els.coachWorkbenchPage.classList.toggle("active", page === "workbench");
   els.coachPeoplePage.classList.toggle("active", page === "people");
+  if (els.coachPinPage) els.coachPinPage.classList.toggle("active", page === "pin");
 }
 
 function changeWeek(offset) {
@@ -397,16 +466,20 @@ function renderWeekLabels() {
   if (els.coachWeekContext) {
     els.coachWeekContext.textContent = label;
   }
-  if (els.seedDemoCopy) els.seedDemoCopy.textContent = "放入一组测试数据";
-  if (els.generateDraftCopy) els.generateDraftCopy.textContent = "按常用安排和临时申请自动排一版";
   const exportLabel = els.exportCalendar?.querySelector("strong");
   if (exportLabel) exportLabel.textContent = "导出日历";
 }
 
 function renderStudentSteps() {
   if (!els.studentStepTabs) return;
-  if (els.studentCard) els.studentCard.dataset.studentStep = String(currentStudentStep);
+  if (els.studentCard) {
+    els.studentCard.dataset.studentStep = String(currentStudentStep);
+    els.studentCard.classList.toggle("has-submitted-request", Boolean(lastSubmittedRequest));
+  }
   document.body.dataset.studentStep = String(currentStudentStep);
+  const notesField = els.studentNotes?.closest(".field");
+  if (notesField) notesField.style.display = lastSubmittedRequest ? "none" : "";
+  if (lastSubmittedRequest && els.studentMessage) els.studentMessage.textContent = "";
   const inDetailedFlow = currentStudentStep >= 3 && !lastSubmittedRequest;
   if (els.studentProgressCard) {
     const label = STUDENT_STEPS[currentStudentStep];
@@ -732,13 +805,14 @@ function submitStudentRequest() {
 
   state.requests = state.requests.filter((item) => item.name !== name || item.code !== request.code);
   state.requests.push(request);
+  syncRequestIntoDraft(request);
   saveState();
   lastSubmittedRequest = request;
   weeklyEditMode = true;
   currentStudentStep = STUDENT_STEPS.length - 1;
   renderStudentSteps();
   renderDefaultSummary();
-  els.studentMessage.textContent = "已提交给 Dora。需要修改的话，点上面的「返回修改这次申请」。";
+  els.studentMessage.textContent = "";
   renderMySchedule();
   focusStudentSubmission();
 }
@@ -899,22 +973,55 @@ function renderRequestPreview() {
   const request = lastSubmittedRequest || buildDraftRequestPreview();
   const submitted = Boolean(lastSubmittedRequest);
   const weekLabel = getWeekRangeLabel();
+  const timeLine = request.availability.length ? request.availability.map(formatSlot).map(escapeHtml).join(" / ") : "还没选择";
+  const goalLine = request.goals.length ? request.goals.map((goal) => escapeHtml(normalizeGoal(goal))).join(" / ") : "听 Dora 安排";
+  const locationLine = request.locations.length ? request.locations.map(escapeHtml).join(" / ") : "还没选择";
   els.requestPreview.innerHTML = `
-    <div class="submission-summary ${submitted ? "submitted" : ""}">
+    <div class="submission-summary ${submitted ? "submitted compact-submission" : ""}">
       ${submitted ? `<div class="success-mark">✓</div>` : ""}
-      <span>${submitted ? "已送达 Dora" : "提交前确认"}</span>
-      <strong>${request.name || "还没填名字"} · 想上 ${request.desiredCount} 节</strong>
-      ${submitted ? `<h3>${weekLabel} 的申请已经提交</h3><p class="success-copy">你不用再点一次提交。Dora 排好最终课表后，回到这里输入同一个名字和识别码，就能查看这个日期范围的课程。</p>` : `<p class="success-copy">确认你正在提交 ${weekLabel} 的申请。</p>`}
-      <p>时间：${request.availability.length ? request.availability.map(formatSlot).join(" / ") : "还没选择"}</p>
-      <p>内容：${request.goals.map(normalizeGoal).join(" / ")}</p>
-      <p>地点：${request.locations.length ? request.locations.join(" / ") : "还没选择"}</p>
-      ${submitted ? `<button class="ghost" type="button" data-edit-submission>返回修改这次申请</button>` : ""}
+      ${submitted ? `
+        <h3>申请已提交</h3>
+        <div class="submission-lines">
+          <p><b>时间</b><span>${timeLine}</span></p>
+          <p><b>内容</b><span>${goalLine}</span></p>
+          <p><b>地点</b><span>${locationLine}</span></p>
+        </div>
+        <p class="success-copy">等 Dora 发布课程后，回到「我的训练」就能看到确定的上课时间。</p>
+      ` : `
+        <span>提交前确认</span>
+        <strong>${escapeHtml(request.name || "还没填名字")} · 想上 ${request.desiredCount} 节</strong>
+        <p class="success-copy">确认你正在提交 ${weekLabel} 的申请。</p>
+        <p>时间：${timeLine}</p>
+        <p>内容：${goalLine}</p>
+        <p>地点：${locationLine}</p>
+      `}
+      ${submitted ? `
+        <div class="submission-actions">
+          <button class="primary" type="button" data-return-student-home>回到我的训练</button>
+          <button class="ghost" type="button" data-edit-submission>返回修改这次申请</button>
+        </div>
+      ` : ""}
     </div>
   `;
+  on(els.requestPreview.querySelector("[data-return-student-home]"), "click", () => {
+    lastSubmittedRequest = null;
+    weeklyEditMode = false;
+    setStudentStep(1);
+    renderMySchedule();
+    window.requestAnimationFrame(() => {
+      els.mySchedule?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
   on(els.requestPreview.querySelector("[data-edit-submission]"), "click", () => {
     lastSubmittedRequest = null;
     weeklyEditMode = true;
     setStudentStep(3);
+  });
+}
+
+function closeActionMenus() {
+  [els.coachActions, els.studentMoreActions].filter(Boolean).forEach((menu) => {
+    menu.open = false;
   });
 }
 
@@ -972,7 +1079,7 @@ function renderMySchedule() {
       <div class="schedule-home-items">
         ${routine.routine.map((item, index) => `
           <article class="schedule-card">
-            <strong>${formatSlot(item.slotKey)}</strong>
+            <strong>${formatSlotLabel(item.slotKey)}</strong>
             <span>${normalizeGoal(item.goal || routine.goals?.[index])} · ${routine.locations.join(" / ")}</span>
           </article>
         `).join("")}
@@ -1001,7 +1108,7 @@ function unlockCoach() {
     els.pinMessage.textContent = "";
     showView("coach");
   } else {
-    els.pinMessage.textContent = "PIN 不对。可以请 Dora 确认当前 PIN。";
+    els.pinMessage.textContent = "PIN 不对。如果忘记了，请联系小黄去云端找回。";
   }
 }
 
@@ -1083,7 +1190,8 @@ function seedDemo() {
   generateDraft();
 }
 
-function generateDraft() {
+function generateDraft(options = {}) {
+  const shouldRender = options.render !== false;
   const requests = getEffectiveRequests();
   const dayLocations = suggestDayLocations(requests);
   const sessions = expandSessions(requests);
@@ -1112,18 +1220,80 @@ function generateDraft() {
   const issues = findIssues(assignments, unassigned, dayLocations);
   state.draft = { assignments, unassigned, dayLocations, issues };
   saveState();
-  renderCoach();
+  if (shouldRender) renderCoach();
+}
+
+function syncRequestIntoDraft(request) {
+  if (!request?.id) return;
+  const sameStudent = (item) => matchesStudentIdentity(item, request.name, request.code || "");
+  state.draft.assignments = state.draft.assignments.filter((item) => !sameStudent(item));
+  state.draft.unassigned = state.draft.unassigned.filter((item) => !sameStudent(item.request || item));
+
+  const suggestions = suggestDayLocations(getEffectiveRequests());
+  Object.keys(suggestions).forEach((dayId) => {
+    if (!state.draft.dayLocations[dayId]) state.draft.dayLocations[dayId] = suggestions[dayId];
+  });
+
+  const sessions = expandSessions([request]);
+  for (const session of sessions) {
+    const choice = chooseBestSlot(session, state.draft.assignments, state.draft.dayLocations);
+    if (choice) {
+      state.draft.assignments.push({
+        id: makeId(),
+        requestId: session.request.id,
+        name: session.request.name,
+        code: session.request.code || "",
+        goal: session.goal,
+        slotKey: choice,
+        location: formatLocation(state.draft.dayLocations[getDayId(choice)]),
+      });
+    } else {
+      state.draft.unassigned.push({ ...session, id: makeId() });
+    }
+  }
+  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+}
+
+function hasDraftContent() {
+  return Boolean(
+    state.draft.assignments.length ||
+    state.draft.unassigned.length ||
+    Object.keys(state.draft.dayLocations || {}).length ||
+    state.draft.issues.length
+  );
+}
+
+function ensureCoachDraft() {
+  if (state.published.length || hasDraftContent()) return;
+  if (!getEffectiveRequests().length) return;
+  generateDraft({ render: false });
 }
 
 function suggestDayLocations(requests) {
   const result = {};
   for (const day of DAYS) {
     const votes = countLocationVotes(day.id, requests);
-    if (votes["235 Grand"] > votes.Bisby) result[day.id] = "235 Grand";
-    else if (votes.Bisby > votes["235 Grand"]) result[day.id] = "Bisby";
-    else result[day.id] = "";
+    result[day.id] = chooseDayLocation(votes);
   }
   return result;
+}
+
+function chooseDayLocation(votes) {
+  if (votes.Bisby > votes["235 Grand"]) return "Bisby";
+  if (votes["235 Grand"] > votes.Bisby) return "235 Grand";
+  return "";
+}
+
+function ensureDraftDayLocations() {
+  const suggestions = suggestDayLocations(getEffectiveRequests());
+  let changed = false;
+  for (const day of DAYS) {
+    if (!state.draft.dayLocations[day.id]) {
+      state.draft.dayLocations[day.id] = suggestions[day.id];
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 function countLocationVotes(dayId, requests) {
@@ -1221,8 +1391,8 @@ function findIssues(assignments, unassigned, dayLocations) {
       issues.push({
         type: "location-choice",
         dayId: day.id,
-        title: `${day.label} 需要 Dora 选地点`,
-        text: "这一天已经有人上课，但地点还没有确定。Dora 需要在 235 Grand 和 Bisby 里选一个。",
+        title: `${day.label} 地点未定`,
+        text: "这一天已经有人上课，Dora 可以在上方下拉菜单里选 235 Grand 或 Bisby。",
         severity: "review",
       });
     }
@@ -1281,13 +1451,18 @@ function findIssues(assignments, unassigned, dayLocations) {
 
 function renderCoach() {
   syncWeekPointers();
+  ensureCoachDraft();
+  const changedLocations = ensureDraftDayLocations();
+  if (normalizeDraftUnassigned() || changedLocations) {
+    state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+    saveState();
+  }
   const effectiveRequests = getEffectiveRequests();
-  els.requestCount.textContent = `${effectiveRequests.length} 人可排`;
+  els.requestCount.textContent = `${effectiveRequests.length} 位学员`;
   setCoachPage(selectedCoachPage);
   renderCoachScheduleOverview();
   renderMobileCoach();
   renderStudentSummary();
-  renderCoachNotes();
   renderLocationRow();
   renderCoachCalendar();
   renderUnassigned();
@@ -1302,7 +1477,7 @@ function renderCoachScheduleOverview() {
   if (!assignments.length) {
     els.coachScheduleOverview.innerHTML = `
       <div class="empty">
-        还没有安排。可以去「调整排课」生成草案。
+        还没有安排。可以去「调整排课」把学员放进时间格。
       </div>
     `;
     return;
@@ -1389,15 +1564,16 @@ function renderMobileDayTabs() {
 function renderMobileDay() {
   if (!els.mobileCoachDay) return;
   const day = DAYS.find((item) => item.id === selectedMobileDay) || DAYS[0];
-  const location = formatLocation(state.draft.dayLocations[day.id]);
+  const location = state.draft.dayLocations[day.id] || chooseDayLocation(countLocationVotes(day.id, getEffectiveRequests()));
+  state.draft.dayLocations[day.id] = location;
   const dayAssignments = state.draft.assignments.filter((item) => getDayId(item.slotKey) === day.id);
   els.mobileCoachDay.innerHTML = `
     <div class="mobile-location">
       <label>
         <span>${day.label} 地点</span>
         <select data-mobile-day-location="${day.id}">
-          <option value="" ${state.draft.dayLocations[day.id] ? "" : "selected"}>Dora 选地点</option>
-          ${LOCATIONS.map((item) => `<option value="${item}" ${state.draft.dayLocations[day.id] === item ? "selected" : ""}>${item}</option>`).join("")}
+          <option value="" ${location ? "" : "selected"}>Dora 选地点</option>
+          ${LOCATIONS.map((item) => `<option value="${item}" ${location === item ? "selected" : ""}>${item}</option>`).join("")}
         </select>
       </label>
       <strong>${location}</strong>
@@ -1412,13 +1588,27 @@ function renderMobileDay() {
   });
 
   els.mobileCoachDay.querySelectorAll(".mobile-slot").forEach((slot) => {
-    slot.addEventListener("click", () => {
+    slot.addEventListener("click", (event) => {
+      const manualButton = event.target.closest("[data-mobile-manual-add]");
+      if (manualButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        openManualCoursePrompt(manualButton.dataset.mobileManualAdd);
+        return;
+      }
       if (selectedMove) {
         moveSelectedToSlot(slot.dataset.mobileSlot);
         return;
       }
       const issue = state.draft.issues.find((item) => item.slotKey === slot.dataset.mobileSlot);
       renderIssue(issue || null);
+    });
+  });
+
+  els.mobileCoachDay.querySelectorAll("[data-mobile-remove-assignment]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      removeAssignment(button.dataset.mobileRemoveAssignment);
     });
   });
 
@@ -1449,6 +1639,7 @@ function renderMobileUnassigned() {
     <button class="${selectedMove?.type === "unassigned" && selectedMove.id === item.id ? "selected" : ""}" type="button" data-mobile-unassigned-id="${item.id}">
       <strong>${item.request.name} · ${item.goal}</strong>
       <span>可选：${item.request.availability.map(formatSlot).join(" / ")}</span>
+      ${item.request.notes ? `<em>备注：${escapeHtml(item.request.notes)}</em>` : ""}
     </button>
   `).join("");
   els.mobileUnassignedPool.querySelectorAll("[data-mobile-unassigned-id]").forEach((button) => {
@@ -1462,6 +1653,7 @@ function renderMobileSlot(slotKey, dayAssignments) {
   const assignments = dayAssignments.filter((item) => item.slotKey === slotKey);
   const issue = state.draft.issues.find((item) => item.slotKey === slotKey);
   const statusLabel = issue?.severity === "error" ? "需要调整" : issue?.severity === "review" ? "Dora 看一下" : "";
+  const canAdd = assignments.length < CAPACITY;
   return `
     <article class="mobile-slot ${issue ? issue.severity : ""}" data-mobile-slot="${slotKey}">
       <div>
@@ -1476,8 +1668,10 @@ function renderMobileSlot(slotKey, dayAssignments) {
             <select data-mobile-assignment-goal="${item.id}" aria-label="修改 ${escapeAttribute(item.name)} 的训练内容">
               ${renderGoalOptions(item.goal)}
             </select>
+            ${item.manual ? `<button class="remove-assignment" type="button" data-mobile-remove-assignment="${item.id}" aria-label="移除 ${escapeAttribute(item.name)}">×</button>` : ""}
           </div>
-        `).join("") : "<span>空</span>"}
+        `).join("") : ""}
+        ${canAdd ? `<button class="manual-add-chip mobile-manual-add" type="button" data-mobile-manual-add="${slotKey}" aria-label="手动加课 ${escapeAttribute(formatSlot(slotKey))}">+</button>` : ""}
       </div>
     </article>
   `;
@@ -1505,106 +1699,153 @@ function renderMobileIssues() {
 function renderStudentSummary() {
   const requests = getEffectiveRequests();
   if (!requests.length) {
-    els.studentSummary.innerHTML = `<div class="empty">还没有常用安排或临时申请。</div>`;
+    els.studentSummary.innerHTML = `<div class="empty">还没有学员设置常用安排。</div>`;
     return;
   }
   els.studentSummary.innerHTML = requests.map((request) => {
-    const assigned = state.draft.assignments.filter((item) => item.requestId === request.id).length;
-    const status = assigned >= request.desiredCount ? "done" : assigned === 0 ? "blocked" : "needs";
     const code = request.code || "";
     const sourceLabel = request.source === "default" ? "常用安排" : "本周临时改";
+    const preferenceItems = getPreferenceItems(request);
     return `
-      <article class="student-row ${status}">
-        <strong>${request.name}</strong>
-        <span>${sourceLabel} · 目标 ${request.desiredCount} 节 / 已排 ${assigned} 节</span>
-        <small>${request.goals.map(normalizeGoal).join(" / ")} · 可用 ${request.availability.length} 个时间</small>
-        <div class="student-code-line">
-          <small>识别码：${code || "未填写"}</small>
-          ${code ? `<button type="button" data-copy-code="${escapeAttribute(code)}">复制</button>` : ""}
+      <article class="student-row preference-row">
+        <header class="student-row-heading">
+          <div>
+            <strong>${request.name}</strong>
+            <span>${sourceLabel}</span>
+          </div>
+          <div class="student-code-line">
+            <small>PIN：${code || "未填写"}</small>
+            ${code ? `<button type="button" data-copy-code="${escapeAttribute(code)}">复制</button>` : ""}
+            <button class="danger-lite" type="button" data-delete-student-name="${escapeAttribute(request.name)}" data-delete-student-code="${escapeAttribute(code)}">删除</button>
+          </div>
+        </header>
+        <div class="student-preference-stack">
+          ${preferenceItems.map((item, index) => `
+            <section class="student-preference-card">
+              <span>偏好 ${index + 1}</span>
+              <dl>
+                <div>
+                  <dt>时间 / 地点</dt>
+                  <dd>${item.time} · ${item.location}</dd>
+                </div>
+                <div>
+                  <dt>内容</dt>
+                  <dd>${item.goal}</dd>
+                </div>
+              </dl>
+            </section>
+          `).join("")}
         </div>
+        ${request.notes ? `<p class="student-note">备注：${escapeHtml(request.notes)}</p>` : ""}
+        <small>目标 ${request.desiredCount} 节</small>
       </article>
     `;
   }).join("");
-  els.studentSummary.querySelectorAll("[data-copy-code]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const code = button.dataset.copyCode || "";
-      try {
-        await navigator.clipboard.writeText(code);
-        button.textContent = "已复制";
-      } catch {
-        button.textContent = code;
-      }
-      window.setTimeout(() => {
-        button.textContent = "复制";
-      }, 1600);
-    });
-  });
 }
 
-function renderCoachNotes() {
-  if (!els.coachNotesList) return;
-  const names = getKnownStudentNames();
-  if (!names.length) {
-    els.coachNotesList.innerHTML = `<div class="empty compact">有学员提交后，这里会出现可编辑笔记。</div>`;
+async function handleStudentSummaryClick(event) {
+  const deleteButton = event.target.closest("[data-delete-student-name]");
+  if (deleteButton && els.studentSummary.contains(deleteButton)) {
+    event.preventDefault();
+    event.stopPropagation();
+    confirmDeleteStudent(deleteButton.dataset.deleteStudentName || "", deleteButton.dataset.deleteStudentCode || "");
     return;
   }
-  state.coachNotes = isPlainObject(state.coachNotes) ? state.coachNotes : {};
-  els.coachNotesList.innerHTML = names.map((name) => `
-    <article class="coach-note-card">
-      <label class="field">
-        <span class="note-card-heading"><strong>${name}</strong><em>粘贴后自动保存</em></span>
-        <textarea data-coach-note="${escapeAttribute(name)}" placeholder="可以从 Apple Notes 复制过来：
-训练偏好：
-伤病注意：
-下次计划：">${escapeTextarea(state.coachNotes[name] || "")}</textarea>
-      </label>
-    </article>
-  `).join("");
-  els.coachNotesList.querySelectorAll("[data-coach-note]").forEach((textarea) => {
-    textarea.addEventListener("input", () => {
-      state.coachNotes[textarea.dataset.coachNote] = textarea.value;
-      saveState();
-    });
-  });
+
+  const copyButton = event.target.closest("[data-copy-code]");
+  if (!copyButton || !els.studentSummary.contains(copyButton)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const code = copyButton.dataset.copyCode || "";
+  try {
+    await navigator.clipboard.writeText(code);
+    copyButton.textContent = "已复制";
+  } catch {
+    copyButton.textContent = code;
+  }
+  window.setTimeout(() => {
+    copyButton.textContent = "复制";
+  }, 1600);
 }
 
-function getKnownStudentNames() {
-  const names = new Set();
-  getEffectiveRequests().forEach((request) => {
-    if (request.name) names.add(request.name);
+function confirmDeleteStudent(name, code) {
+  const label = code ? `${name}（PIN ${code}）` : name;
+  const typed = window.prompt(`删除 ${label} 会移除她的常用安排、当前周申请和草案里的课程。\n\n请输入 delete 确认删除。`, "");
+  if (typed !== "delete") {
+    renderIssue({
+      title: "没有删除",
+      text: "需要输入 delete 才会真的删除学员资料。",
+      severity: "review",
+    }, { focus: false });
+    return;
+  }
+  deleteStudentProfile(name, code);
+  window.alert(`${label} 已删除。`);
+}
+
+function deleteStudentProfile(name, code) {
+  const matches = (item) => matchesStudentIdentity(item, name, code);
+  Object.keys(state.routines || {}).forEach((key) => {
+    const routine = state.routines[key];
+    const routineName = getNameFromRoutineKey(key, routine);
+    const routineCode = routine?.code || String(key).split("::")[1] || "";
+    if (matchesStudentIdentity({ name: routineName, code: routineCode }, name, code)) {
+      delete state.routines[key];
+    }
   });
-  Object.entries(state.routines || {}).forEach(([key, routine]) => {
-    const name = getNameFromRoutineKey(key, routine);
-    if (name) names.add(name);
+  state.requests = state.requests.filter((item) => !matches(item));
+  state.draft.assignments = state.draft.assignments.filter((item) => !matches(item));
+  state.draft.unassigned = state.draft.unassigned.filter((item) => !matches(item.request || item));
+  state.published = state.published.filter((item) => !matches(item));
+  selectedMove = null;
+  dragged = null;
+  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+  saveState();
+  renderCoach();
+}
+
+function matchesStudentIdentity(item, name, code) {
+  const itemName = normalizeIdentityValue(item?.name);
+  const itemCode = normalizeIdentityValue(item?.code);
+  return itemName === normalizeIdentityValue(name) && itemCode === normalizeIdentityValue(code);
+}
+
+function normalizeIdentityValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getPreferenceItems(request) {
+  const routine = Array.isArray(request.routine) ? request.routine.filter((item) => item.slotKey) : [];
+  const location = request.locations.length ? request.locations.join(" / ") : "未设置";
+  const items = routine.length
+    ? routine
+    : request.availability.map((slotKey, index) => ({
+      slotKey,
+      goal: request.goals[index] || request.goals[0] || FLEX_GOAL,
+    }));
+  if (!items.length) return [{ time: "未设置", goal: FLEX_GOAL, location }];
+  return items.map((item) => {
+    const goal = normalizeGoal(item.goal || FLEX_GOAL);
+    return {
+      time: formatSlotLabel(item.slotKey),
+      goal,
+      location,
+    };
   });
-  state.published.forEach((assignment) => {
-    if (assignment.name) names.add(assignment.name);
-  });
-  return [...names].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 }
 
 function renderLocationRow() {
   els.locationRow.innerHTML = `<div class="time-spacer">地点</div>` + DAYS.map((day) => {
-    const location = state.draft.dayLocations[day.id] || "";
+    const location = state.draft.dayLocations[day.id] || chooseDayLocation(countLocationVotes(day.id, getEffectiveRequests()));
+    state.draft.dayLocations[day.id] = location;
     const dayIssue = state.draft.issues.find((issue) => issue.dayId === day.id);
-    const votes = countLocationVotes(day.id, getEffectiveRequests());
-    const totalVotes = votes["235 Grand"] + votes.Bisby;
-    const suggestion = totalVotes
-      ? votes["235 Grand"] === votes.Bisby
-        ? `平票 ${votes["235 Grand"]}:${votes.Bisby}`
-        : `建议 ${votes["235 Grand"] > votes.Bisby ? "235 Grand" : "Bisby"} · ${votes["235 Grand"]}:${votes.Bisby}`
-      : "待 Dora 选择";
-    const locationStatus = !location ? "Dora 选地点" : dayIssue ? "Dora 看一下" : "已确定";
     return `
-      <label class="location-card ${dayIssue || !location ? "review" : "selected"}" data-day-card="${day.id}">
-        <span class="location-status">${locationStatus}</span>
-        <span>${day.label}</span>
-        <strong>${formatMonthDay(getDayDate(DAYS.findIndex((item) => item.id === day.id)))}</strong>
+      <label class="location-card ${dayIssue ? "review" : "selected"}" data-day-card="${day.id}">
+        <span class="location-day-line">${day.label} ${formatMonthDay(getDayDate(DAYS.findIndex((item) => item.id === day.id)))}</span>
         <select data-day-location="${day.id}">
           <option value="" ${location ? "" : "selected"}>Dora 选地点</option>
           ${LOCATIONS.map((item) => `<option value="${item}" ${location === item ? "selected" : ""}>${item}</option>`).join("")}
         </select>
-        <small>${suggestion}</small>
       </label>
     `;
   }).join("");
@@ -1635,7 +1876,14 @@ function renderCoachCalendar() {
   els.coachCalendar.querySelectorAll(".slot").forEach((slot) => {
     slot.addEventListener("dragover", (event) => event.preventDefault());
     slot.addEventListener("drop", () => moveDraggedToSlot(slot.dataset.slotKey));
-    slot.addEventListener("click", () => {
+    slot.addEventListener("click", (event) => {
+      const manualButton = event.target.closest("[data-manual-add]");
+      if (manualButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        openManualCoursePrompt(manualButton.dataset.manualAdd);
+        return;
+      }
       if (selectedMove) {
         moveSelectedToSlot(slot.dataset.slotKey);
         return;
@@ -1662,6 +1910,13 @@ function renderCoachCalendar() {
       updateAssignmentGoal(select.dataset.assignmentGoal, select.value);
     });
   });
+
+  els.coachCalendar.querySelectorAll("[data-remove-assignment]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      removeAssignment(button.dataset.removeAssignment);
+    });
+  });
 }
 
 function renderSlot(slotKey) {
@@ -1669,6 +1924,7 @@ function renderSlot(slotKey) {
   const issue = state.draft.issues.find((item) => item.slotKey === slotKey);
   const className = issue?.severity === "error" ? "error" : issue?.severity === "review" ? "review" : "";
   const statusLabel = issue?.severity === "error" ? "需要调整" : issue?.severity === "review" ? "Dora 看一下" : "";
+  const canAdd = assignments.length < CAPACITY;
   return `
     <article class="slot ${className}" data-slot-key="${slotKey}">
       ${statusLabel ? `<span class="slot-status ${issue.severity}">${statusLabel}</span>` : ""}
@@ -1679,12 +1935,11 @@ function renderSlot(slotKey) {
             <select class="assignment-goal-select" data-assignment-goal="${item.id}" aria-label="修改 ${escapeAttribute(item.name)} 的训练内容">
               ${renderGoalOptions(item.goal)}
             </select>
+            ${item.manual ? `<button class="remove-assignment" type="button" data-remove-assignment="${item.id}" aria-label="移除 ${escapeAttribute(item.name)}">×</button>` : ""}
           </div>
         `).join("")}
-        ${assignments.length < CAPACITY ? `<span class="drop-chip">还可加 ${CAPACITY - assignments.length} 人</span>` : ""}
+        ${canAdd ? `<button class="manual-add-chip" type="button" data-manual-add="${slotKey}" aria-label="手动加课 ${escapeAttribute(formatSlot(slotKey))}">+</button>` : ""}
       </div>
-      <strong>${assignments.map((item) => item.goal).join(" / ") || "空"}</strong>
-      <span>${formatSlot(slotKey)} · ${formatLocation(state.draft.dayLocations[getDayId(slotKey)])}</span>
     </article>
   `;
 }
@@ -1704,14 +1959,106 @@ function updateAssignmentGoal(assignmentId, goal) {
   renderCoach();
 }
 
+function openManualCoursePrompt(slotKey) {
+  const currentCount = state.draft.assignments.filter((item) => item.slotKey === slotKey).length;
+  if (currentCount >= CAPACITY) {
+    renderIssue({
+      type: "capacity",
+      title: "这个时间已经满了",
+      text: `${formatSlot(slotKey)} 已经有 2 位学员，不能再直接加课。`,
+      severity: "error",
+      slotKey,
+    });
+    return;
+  }
+  manualCourseSlotKey = slotKey;
+  if (els.manualCourseTitle) els.manualCourseTitle.textContent = `手动加课 · ${formatSlot(slotKey)}`;
+  if (els.manualCourseName) els.manualCourseName.value = "";
+  if (els.manualCourseGoal) els.manualCourseGoal.value = FLEX_GOAL;
+  const dayId = getDayId(slotKey);
+  if (els.manualCourseLocation) els.manualCourseLocation.value = state.draft.dayLocations[dayId] || "";
+  if (els.manualCourseMessage) els.manualCourseMessage.textContent = "";
+  if (els.manualCourseModal) els.manualCourseModal.hidden = false;
+  window.requestAnimationFrame(() => els.manualCourseName?.focus());
+}
+
+function closeManualCourseModal() {
+  manualCourseSlotKey = null;
+  if (els.manualCourseModal) els.manualCourseModal.hidden = true;
+}
+
+function saveManualCourse() {
+  if (!manualCourseSlotKey) return;
+  const name = els.manualCourseName?.value.trim() || "";
+  if (!name) {
+    if (els.manualCourseMessage) els.manualCourseMessage.textContent = "先填学员名字。";
+    els.manualCourseName?.focus();
+    return;
+  }
+  const goal = normalizeGoal(els.manualCourseGoal?.value || FLEX_GOAL);
+  const location = normalizeManualLocation(els.manualCourseLocation?.value || "");
+  if (location === null) return;
+  addManualCourse(manualCourseSlotKey, name, goal, location);
+  closeManualCourseModal();
+}
+
+function addManualCourse(slotKey, name, goal, location) {
+  const dayId = getDayId(slotKey);
+  if (location) state.draft.dayLocations[dayId] = location;
+  const requestId = `manual-${makeId()}`;
+  state.draft.assignments.push({
+    id: makeId(),
+    requestId,
+    name: name.trim(),
+    code: "",
+    goal,
+    slotKey,
+    location: formatLocation(state.draft.dayLocations[dayId]),
+    manual: true,
+  });
+  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+  saveState();
+  renderCoach();
+}
+
+function normalizeManualLocation(value) {
+  const location = (value || "").trim();
+  if (!location) return "";
+  const matched = LOCATIONS.find((item) => item.toLowerCase() === location.toLowerCase());
+  if (matched) return matched;
+  window.alert("地点只能填 235 Grand 或 Bisby。");
+  return null;
+}
+
+function removeAssignment(assignmentId) {
+  const assignment = state.draft.assignments.find((item) => item.id === assignmentId);
+  if (!assignment) return;
+  if (!window.confirm(`确定移除 ${assignment.name} 的这节课吗？`)) return;
+  state.draft.assignments = state.draft.assignments.filter((item) => item.id !== assignmentId);
+  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+  selectedMove = null;
+  dragged = null;
+  saveState();
+  renderCoach();
+}
+
 function renderUnassigned() {
   if (!state.draft.unassigned.length) {
     els.unassignedPool.innerHTML = `<span class="muted">没有未安排的申请。</span>`;
-    return;
+  } else {
+    els.unassignedPool.innerHTML = state.draft.unassigned.map((item) => `
+      <button class="${selectedMove?.type === "unassigned" && selectedMove.id === item.id ? "selected" : ""}" draggable="true" data-unassigned-id="${item.id}">
+        <strong>${item.request.name} · ${item.goal}</strong>
+        <span>可选：${item.request.availability.map(formatSlot).join(" / ")}</span>
+        ${item.request.notes ? `<em>备注：${escapeHtml(item.request.notes)}</em>` : ""}
+      </button>
+    `).join("");
   }
-  els.unassignedPool.innerHTML = state.draft.unassigned.map((item) => `
-    <button class="${selectedMove?.type === "unassigned" && selectedMove.id === item.id ? "selected" : ""}" draggable="true" data-unassigned-id="${item.id}">${item.request.name} · ${item.goal} · 可 ${item.request.availability.map(formatSlot).join(" / ")}</button>
-  `).join("");
+
+  els.unassignedPool.ondragover = allowUnassignedDrop;
+  els.unassignedPool.ondragleave = clearUnassignedDropState;
+  els.unassignedPool.ondrop = moveDraggedToUnassigned;
+  els.unassignedPool.onclick = moveSelectedToUnassigned;
 
   els.unassignedPool.querySelectorAll("[draggable='true']").forEach((button) => {
     button.addEventListener("dragstart", () => {
@@ -1721,6 +2068,125 @@ function renderUnassigned() {
       selectMoveSource("unassigned", button.dataset.unassignedId);
     });
   });
+}
+
+function allowUnassignedDrop(event) {
+  if (!dragged || dragged.type !== "assignment") return;
+  event.preventDefault();
+  els.unassignedPool.classList.add("drop-ready");
+}
+
+function clearUnassignedDropState() {
+  els.unassignedPool.classList.remove("drop-ready");
+}
+
+function moveSelectedToUnassigned(event) {
+  if (event.target.closest("[data-unassigned-id]")) return;
+  if (!selectedMove || selectedMove.type !== "assignment") return;
+  dragged = selectedMove;
+  moveDraggedToUnassigned(event);
+}
+
+function moveDraggedToUnassigned(event) {
+  event?.preventDefault?.();
+  clearUnassignedDropState();
+  if (!dragged || dragged.type !== "assignment") return;
+  const index = state.draft.assignments.findIndex((item) => item.id === dragged.id);
+  const assignment = state.draft.assignments[index];
+  if (!assignment) return;
+  state.draft.assignments.splice(index, 1);
+  state.draft.unassigned.push(buildUnassignedFromAssignment(assignment));
+  normalizeDraftUnassigned();
+  dragged = null;
+  selectedMove = null;
+  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+  saveState();
+  renderCoach();
+}
+
+function buildUnassignedFromAssignment(assignment) {
+  const request = findEffectiveRequestById(assignment.requestId) || {
+    id: assignment.requestId || `manual-${makeId()}`,
+    name: assignment.name,
+    code: assignment.code || "",
+    desiredCount: 1,
+    goals: [assignment.goal],
+    locations: assignment.location && LOCATIONS.includes(assignment.location) ? [assignment.location] : [],
+    availability: allSlotKeys(),
+    notes: "Dora 手动添加",
+    source: "manual",
+    routine: [],
+    submittedAt: "",
+  };
+  return {
+    id: makeId(),
+    request,
+    index: 0,
+    goal: normalizeGoal(assignment.goal),
+  };
+}
+
+function clearDraftSchedule() {
+  if (!state.draft.assignments.length && !state.draft.unassigned.length) {
+    renderIssue({
+      title: "现在没有要清空的排课",
+      text: "当前草案里没有课程，也没有待排申请。",
+      severity: "review",
+    }, { focus: false });
+    return;
+  }
+  const ok = window.confirm("确定把当前草案里的课程全部放回未排入课表吗？学员申请和常用安排会保留。");
+  if (!ok) return;
+  const rebuilt = expandSessions(getEffectiveRequests()).map((session) => ({
+    ...session,
+    id: makeId(),
+  }));
+  const manualSessions = state.draft.assignments
+    .filter((assignment) => assignment.manual || !findEffectiveRequestById(assignment.requestId))
+    .map(buildUnassignedFromAssignment);
+  state.draft.assignments = [];
+  state.draft.unassigned = [...rebuilt, ...manualSessions];
+  normalizeDraftUnassigned();
+  selectedMove = null;
+  dragged = null;
+  currentIssue = null;
+  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
+  saveState();
+  renderCoach();
+  renderIssue({
+    title: "已经放回未排入课表",
+    text: "现在可以从下面的待排申请重新放进日历。",
+    severity: "review",
+  }, { focus: false });
+}
+
+function normalizeDraftUnassigned() {
+  if (!Array.isArray(state.draft?.unassigned)) return false;
+  const assignedCounts = new Map();
+  state.draft.assignments.forEach((assignment) => {
+    const key = getRequestCountKey(assignment);
+    assignedCounts.set(key, (assignedCounts.get(key) || 0) + 1);
+  });
+  const pendingCounts = new Map();
+  const next = [];
+  for (const item of state.draft.unassigned) {
+    const request = item.request || findEffectiveRequestById(item.requestId);
+    const key = getRequestCountKey(item);
+    const desired = Math.max(1, Number(request?.desiredCount || item.request?.desiredCount || 1));
+    const assigned = assignedCounts.get(key) || 0;
+    const pending = pendingCounts.get(key) || 0;
+    if (assigned + pending >= desired) continue;
+    next.push(item);
+    pendingCounts.set(key, pending + 1);
+  }
+  if (next.length === state.draft.unassigned.length) return false;
+  state.draft.unassigned = next;
+  return true;
+}
+
+function getRequestCountKey(item) {
+  const request = item.request || {};
+  return item.requestId || request.id || `${request.name || item.name || "manual"}::${request.code || item.code || ""}`;
 }
 
 function renderIssue(issue, options = { focus: true }) {
@@ -1986,6 +2452,15 @@ function findDuplicateStudent(items) {
 }
 
 function buildMoveBlockIssue(item, targetSlot) {
+  const targetItems = state.draft.assignments.filter((assigned) => assigned.slotKey === targetSlot && assigned.id !== item.id);
+  if (targetItems.length >= CAPACITY) {
+    return {
+      title: "这个位置不能放",
+      text: `${formatSlot(targetSlot)} 已经满员。`,
+      severity: "error",
+    };
+  }
+  if (item.manual) return null;
   const request = findEffectiveRequestById(item.requestId);
   if (!request?.availability.includes(targetSlot)) {
     const options = suggestAskableSlots(item, targetSlot);
@@ -1997,14 +2472,6 @@ function buildMoveBlockIssue(item, targetSlot) {
       studentName: item.name,
       targetSlot,
       options,
-    };
-  }
-  const targetItems = state.draft.assignments.filter((assigned) => assigned.slotKey === targetSlot && assigned.id !== item.id);
-  if (targetItems.length >= CAPACITY) {
-    return {
-      title: "这个位置不能放",
-      text: `${formatSlot(targetSlot)} 已经满员。`,
-      severity: "error",
     };
   }
   if (targetItems.some((assigned) => assigned.requestId === item.requestId)) {
@@ -2214,7 +2681,7 @@ function enrichAssignmentWithCode(assignment) {
 function exportCalendar() {
   const assignments = state.published.length ? state.published : state.draft.assignments;
   if (!assignments.length) {
-    alert("还没有可导出的安排。可以先生成草案或发布最终安排。");
+    alert("还没有可导出的安排。可以先去调整排课，把学员放进时间格。");
     return;
   }
 
@@ -2408,6 +2875,14 @@ function formatSlot(slotKey) {
   const slot = SLOTS.find((item) => item.id === slotId);
   if (!day || !slot) return "未设置";
   return `${day.label} ${formatMonthDay(getDayDate(dayIndex))} ${slot.label}`;
+}
+
+function formatSlotLabel(slotKey) {
+  const [dayId, slotId] = String(slotKey || "").split("-");
+  const day = DAYS.find((item) => item.id === dayId);
+  const slot = SLOTS.find((item) => item.id === slotId);
+  if (!day || !slot) return "未设置";
+  return `${day.label} ${slot.label}`;
 }
 
 function formatSlotTime(slotKey) {

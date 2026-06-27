@@ -185,6 +185,13 @@ h3 {
   z-index: 8;
 }
 
+.coachbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .coach-actions summary {
   min-height: 44px;
   display: inline-flex;
@@ -261,22 +268,9 @@ h3 {
   color: rgba(255, 255, 255, 0.86);
 }
 
-.pin-setting {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid rgba(195, 58, 134, 0.16);
-  border-radius: 14px;
-  background: #fff7fb;
-}
-
-.pin-setting .field {
-  gap: 5px;
-}
-
-.pin-setting input {
-  min-height: 40px;
-  padding: 8px 10px;
+.coach-publish-button {
+  min-height: 44px;
+  padding: 0 18px;
 }
 
 .primary,
@@ -564,6 +558,23 @@ h3 {
   font-size: 1.22rem;
 }
 
+.student-main-heading {
+  align-items: flex-start;
+}
+
+.student-heading-actions {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.student-card:not([data-student-step="1"]) .student-more-actions {
+  display: none;
+}
+
 .student-card[data-student-step="0"] > .submit-row {
   justify-content: stretch;
   margin-top: 16px;
@@ -617,7 +628,7 @@ h3 {
 .student-home-topline {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   position: relative;
 }
@@ -750,7 +761,7 @@ h3 {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 8px 8px 0 rgba(36, 25, 31, 0.1);
-  margin-top: 10px;
+  margin-top: 0;
 }
 
 .default-panel.first-time {
@@ -1066,6 +1077,15 @@ textarea {
   box-shadow: 8px 8px 0 rgba(36, 25, 31, 0.16);
 }
 
+.student-card.has-submitted-request .student-step[data-step="6"] .step-heading {
+  display: none;
+}
+
+.submission-summary.submitted.compact-submission {
+  min-height: 270px;
+  gap: 14px;
+}
+
 .submission-summary span {
   width: fit-content;
   padding: 4px 9px;
@@ -1079,6 +1099,39 @@ textarea {
 .submission-summary p {
   color: var(--muted);
   font-weight: 850;
+}
+
+.submission-lines {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+
+.submission-lines p {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(195, 58, 134, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.submission-lines b {
+  color: var(--pink);
+}
+
+.submission-summary .submission-lines span {
+  width: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: inherit;
+  font-weight: 900;
 }
 
 .submission-summary.submitted strong {
@@ -1107,6 +1160,18 @@ textarea {
   max-width: 560px;
 }
 
+.submission-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.submission-actions button {
+  min-width: 170px;
+}
+
 .message {
   flex: 1;
   color: var(--muted);
@@ -1121,6 +1186,35 @@ textarea {
   background: linear-gradient(135deg, #fff7fb, #f8fff5);
   color: var(--green);
   font-weight: 950;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(36, 25, 31, 0.28);
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal-card {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff, #fff5fa);
+  box-shadow: 12px 12px 0 rgba(36, 25, 31, 0.18);
+}
+
+.manual-course-card .submit-row {
+  justify-content: flex-end;
 }
 
 .my-schedule-list {
@@ -1298,19 +1392,77 @@ textarea {
   align-items: start;
 }
 
-.student-rail {
-  grid-area: students;
-}
-
-.coach-notes-panel {
-  grid-area: notes;
-}
-
 .people-page-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.86fr) minmax(0, 1.14fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   align-items: start;
+}
+
+.pin-manager-panel {
+  max-width: 980px;
+}
+
+.pin-manager-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 620px);
+  gap: 12px;
+}
+
+.pin-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 250, 253, 0.9);
+}
+
+.pin-student-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pin-student-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(195, 58, 134, 0.18);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.pin-student-row div {
+  display: grid;
+  gap: 2px;
+}
+
+.pin-student-row span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.pin-student-row code {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff0f8;
+  color: var(--pink);
+  font-family: inherit;
+  font-weight: 950;
+}
+
+.pin-student-row button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(195, 58, 134, 0.22);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--pink);
+  font-weight: 900;
 }
 
 .calendar-panel {
@@ -1329,6 +1481,11 @@ textarea {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.workbench-hint > div {
+  display: grid;
+  gap: 2px;
+}
+
 .workbench-hint strong {
   color: var(--green);
   font-weight: 950;
@@ -1338,6 +1495,14 @@ textarea {
   color: var(--muted);
   font-size: 0.88rem;
   font-weight: 850;
+}
+
+.compact-action {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 0.86rem;
 }
 
 .status-legend {
@@ -1392,7 +1557,84 @@ textarea {
   margin-top: 8px;
 }
 
+.student-row-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.student-row-heading > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.student-preference-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.student-preference-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(195, 58, 134, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 247, 251, 0.72);
+}
+
+.student-preference-card > span {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.student-preference-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.student-preference-card div {
+  display: grid;
+  gap: 3px;
+}
+
+.student-preference-card dt {
+  color: var(--pink);
+  font-size: 0.74rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.student-preference-card dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.student-note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(195, 58, 134, 0.16);
+  border-radius: 10px;
+  background: #fff7fb;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .student-code-line {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1408,6 +1650,13 @@ textarea {
   color: var(--green);
   font-size: 0.76rem;
   font-weight: 950;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.student-code-line .danger-lite {
+  background: rgba(255, 235, 244, 0.9);
+  color: var(--pink);
 }
 
 .compact-copy {
@@ -1416,59 +1665,8 @@ textarea {
   line-height: 1.35;
 }
 
-#coachNotesList {
-  display: grid;
-  gap: 8px;
-}
-
-.coach-note-card {
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.note-card-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.note-card-heading strong {
-  font-weight: 950;
-}
-
-.note-card-heading em {
-  min-height: 22px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: var(--green-soft);
-  color: var(--green);
-  font-size: 0.72rem;
-  font-style: normal;
-  font-weight: 950;
-  white-space: nowrap;
-}
-
-.coach-note-card textarea {
-  min-height: 92px;
-  font-size: 0.9rem;
-  line-height: 1.35;
-}
-
-.student-row.done {
-  border-left: 4px solid var(--green);
-}
-
-.student-row.needs {
-  border-left: 4px solid var(--amber);
-}
-
-.student-row.blocked {
-  border-left: 4px solid var(--red);
+.student-row.preference-row {
+  border-left: 4px solid var(--pink);
 }
 
 .location-row,
@@ -1518,6 +1716,13 @@ textarea {
   font-size: 0.82rem;
 }
 
+.location-card .location-day-line {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
 .location-card.review {
   border-color: rgba(202, 59, 137, 0.32);
   background: var(--review-soft);
@@ -1527,24 +1732,6 @@ textarea {
 .location-card.selected {
   border-color: rgba(69, 183, 131, 0.34);
   background: rgba(242, 255, 249, 0.94);
-}
-
-.location-status {
-  width: fit-content;
-  min-height: 22px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--green);
-  border: 1px solid rgba(36, 25, 31, 0.08);
-  font-size: 0.68rem;
-  font-weight: 950;
-}
-
-.location-card.review .location-status {
-  color: var(--pink);
 }
 
 .slot {
@@ -1620,6 +1807,8 @@ textarea {
 
 .person-chip,
 .drop-chip,
+.manual-add-chip,
+.remove-assignment,
 .pool-items button {
   min-height: 28px;
   display: inline-flex;
@@ -1669,6 +1858,28 @@ textarea {
   color: var(--green);
 }
 
+.manual-add-chip {
+  min-width: 32px;
+  justify-content: center;
+  border: 1px dashed rgba(202, 59, 137, 0.42);
+  background: #fff7fb;
+  color: var(--pink);
+  cursor: pointer;
+}
+
+.slot:not(.review):not(.error) .manual-add-chip:only-child {
+  margin: auto;
+}
+
+.remove-assignment {
+  min-width: 26px;
+  justify-content: center;
+  border: 0;
+  background: rgba(36, 25, 31, 0.06);
+  color: rgba(36, 25, 31, 0.58);
+  cursor: pointer;
+}
+
 .assignment-goal-select {
   width: auto;
   min-width: 88px;
@@ -1691,6 +1902,41 @@ textarea {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+  min-height: 42px;
+  padding: 4px;
+  border: 1px dashed transparent;
+  border-radius: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pool-items button {
+  display: grid;
+  align-items: start;
+  gap: 3px;
+  height: auto;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.pool-items button strong {
+  font-size: 0.86rem;
+}
+
+.pool-items button span,
+.pool-items button em,
+.mobile-pool button em {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.pool-items.drop-ready {
+  border-color: rgba(195, 58, 134, 0.45);
+  background: rgba(255, 229, 242, 0.68);
 }
 
 .detail-panel {
@@ -1773,6 +2019,11 @@ textarea {
     overflow-x: auto;
   }
 
+  .pin-manager-grid,
+  .people-page-grid {
+    grid-template-columns: 1fr;
+  }
+
   .location-row,
   .coach-calendar {
     min-width: 860px;
@@ -1804,6 +2055,27 @@ textarea {
   .coach-actions {
     width: auto;
     align-self: flex-end;
+  }
+
+  .coachbar-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .coach-publish-button {
+    width: 100%;
+  }
+
+  .pin-student-row {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .student-row-heading,
+  .student-code-line {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .coach-actions summary {
@@ -2220,8 +2492,7 @@ textarea {
     min-width: 720px;
   }
 
-  .student-rail,
-  .coach-notes-panel {
+  .student-rail {
     display: block;
   }
 
@@ -2352,6 +2623,21 @@ textarea {
   .mobile-assignment-chip button {
     border: 0;
     background: transparent;
+  }
+
+  .mobile-people .mobile-manual-add {
+    min-width: 38px;
+    justify-content: center;
+    border-style: dashed;
+    border-color: rgba(202, 59, 137, 0.42);
+    color: var(--pink);
+  }
+
+  .mobile-assignment-chip .remove-assignment {
+    min-width: 28px;
+    padding: 0 8px;
+    background: rgba(36, 25, 31, 0.06);
+    color: rgba(36, 25, 31, 0.58);
   }
 
   .mobile-assignment-chip select {

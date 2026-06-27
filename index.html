@@ -55,12 +55,21 @@
 
       <section class="view" id="studentView">
         <section class="panel student-card">
-          <div class="panel-heading">
+          <div class="panel-heading student-main-heading">
             <div>
               <p class="eyebrow">Member Space</p>
               <h2>我的训练</h2>
             </div>
-            <span class="week-label" id="studentWeekLabel"></span>
+            <div class="student-heading-actions">
+              <span class="week-label" id="studentWeekLabel"></span>
+              <details class="student-more-actions" id="studentMoreActions">
+                <summary>更多操作</summary>
+                <div class="quick-actions" id="weeklyQuickActions">
+                  <button class="primary" id="editDefaultRoutine" type="button">修改常用安排</button>
+                  <button class="ghost" id="customizeWeek" type="button">特殊情况调整</button>
+                </div>
+              </details>
+            </div>
           </div>
           <div class="student-week-context" id="studentWeekContext"></div>
 
@@ -87,13 +96,6 @@
                   <span id="myScheduleTitle">本周</span>
                   <small id="studentHomeWeek"></small>
                 </div>
-                <details class="student-more-actions" id="studentMoreActions">
-                  <summary>更多操作</summary>
-                  <div class="quick-actions" id="weeklyQuickActions">
-                    <button class="primary" id="editDefaultRoutine" type="button">设置常用安排</button>
-                    <button class="ghost" id="customizeWeek" type="button">特殊情况调整</button>
-                  </div>
-                </details>
               </div>
               <div id="mySchedule" class="my-schedule-list">
                 <div class="empty">输入名字后可以查看你的训练安排。</div>
@@ -239,7 +241,7 @@
         <section class="panel pin-panel">
           <p class="eyebrow">Dora Studio</p>
           <h2>输入 Dora PIN</h2>
-          <p class="muted">初始 PIN 是 2468。进入后可以在「本周操作」里修改。</p>
+          <p class="muted">初始 PIN 是 2468。进入后可以在「更多操作」里修改。</p>
           <label class="field">
             <span>PIN</span>
             <input id="coachPin" type="password" inputmode="numeric" />
@@ -257,37 +259,22 @@
             <p class="eyebrow">Dora Studio</p>
             <h2>训练周工作台</h2>
           </div>
-          <details class="coach-actions">
-            <summary>本周操作</summary>
-            <div class="coach-action-menu">
-              <button class="ghost" id="generateDraft" type="button">
-                <strong>生成草案</strong>
-                <span id="generateDraftCopy">根据选中周申请自动排一版</span>
-              </button>
-              <button class="ghost" id="seedDemo" type="button">
-                <strong>填入示例</strong>
-                <span id="seedDemoCopy">快速放入一组测试数据</span>
-              </button>
-              <button class="ghost" id="exportCalendar" type="button">
-                <strong>导出当前周日历</strong>
-                <span>下载这一周的日历文件</span>
-              </button>
-              <div class="pin-setting">
-                <label class="field">
-                  <span>修改 Dora PIN</span>
-                  <input id="newCoachPin" type="password" inputmode="numeric" placeholder="输入新的 PIN" />
-                </label>
-                <button class="ghost" id="saveCoachPin" type="button">
-                  <strong>保存新 PIN</strong>
-                  <span id="coachPinMessage">默认 PIN 是 2468</span>
+          <div class="coachbar-actions">
+            <details class="coach-actions">
+              <summary>更多操作</summary>
+              <div class="coach-action-menu">
+                <button class="ghost" id="exportCalendar" type="button">
+                  <strong>导出日历</strong>
+                  <span>下载这一周的日历文件</span>
+                </button>
+                <button class="ghost" id="pinManagerAction" type="button">
+                  <strong>Dora PIN</strong>
+                  <span>修改教练入口 PIN</span>
                 </button>
               </div>
-              <button class="primary" id="publishSchedule" type="button">
-                <strong>发布最终安排</strong>
-                <span>让学员看到确认后的课表</span>
-              </button>
-            </div>
-          </details>
+            </details>
+            <button class="primary coach-publish-button" id="publishSchedule" type="button">发布最终安排</button>
+          </div>
         </header>
 
         <nav class="coach-tabs" aria-label="教练页面">
@@ -339,13 +326,16 @@
           <section class="workbench">
             <section class="panel calendar-panel">
               <div class="workbench-hint">
-                <strong>点名字，再点时间格</strong>
-                <span>电脑上也可以直接拖拽。</span>
+                <div>
+                  <strong>点名字，再点时间格</strong>
+                  <span>电脑上也可以直接拖拽。</span>
+                </div>
+                <button class="ghost compact-action" id="clearDraftSchedule" type="button">清空排课</button>
               </div>
               <div class="status-legend" aria-label="排课状态说明">
                 <span><i class="legend-dot review"></i>Dora 看一下</span>
                 <span><i class="legend-dot error"></i>需要调整</span>
-                <span><i class="legend-dot selected"></i>已确定</span>
+                <span><i class="legend-dot selected"></i>可这样排</span>
               </div>
               <div class="location-row" id="locationRow"></div>
               <div class="coach-calendar" id="coachCalendar"></div>
@@ -370,25 +360,78 @@
           <section class="people-page-grid">
             <aside class="panel student-rail">
               <div class="rail-heading">
-                <h3>学员状态</h3>
-                <span id="requestCount">0 人可排</span>
+                <h3>学员常用安排</h3>
+                <span id="requestCount">0 位学员</span>
               </div>
-              <p class="muted compact-copy">这里会显示每位会员的识别码；如果会员忘记了，可以复制后发给她。</p>
+              <p class="muted compact-copy">这里直接显示每位学员设置好的时间、内容、地点偏好和识别码。</p>
               <div id="studentSummary"></div>
-            </aside>
-
-            <aside class="panel coach-notes-panel">
-              <div class="rail-heading">
-                <h3>复制 Apple Notes 到这里</h3>
-                <span>自动保存</span>
-              </div>
-              <p class="muted compact-copy">从 Apple Notes 复制每个学员的重点，粘贴到对应名字下面。下次排课会继续保留。</p>
-              <div id="coachNotesList"></div>
             </aside>
           </section>
         </section>
 
+        <section class="coach-page" id="coachPinPage">
+          <section class="panel pin-manager-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">PIN</p>
+                <h2>PIN 管理</h2>
+              </div>
+            </div>
+            <section class="pin-manager-grid">
+              <article class="pin-card">
+                <h3>Dora PIN</h3>
+                <p class="muted compact-copy">这是进入教练端的 PIN。改完后，下次进入 Dora Studio 会使用新的 PIN。</p>
+                <label class="field">
+                  <span>新的 Dora PIN</span>
+                  <input id="newCoachPin" type="password" inputmode="numeric" placeholder="输入新的 PIN" />
+                </label>
+                <button class="primary" id="saveCoachPin" type="button">保存 Dora PIN</button>
+                <p class="message" id="coachPinMessage">默认 PIN 是 2468</p>
+              </article>
+            </section>
+          </section>
+        </section>
+
       </section>
+      <div class="modal-backdrop" id="manualCourseModal" hidden>
+        <section class="modal-card manual-course-card" role="dialog" aria-modal="true" aria-labelledby="manualCourseTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Dora Studio</p>
+              <h2 id="manualCourseTitle">手动加课</h2>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label class="field">
+              <span>学员名字</span>
+              <input id="manualCourseName" placeholder="比如：Emma" />
+            </label>
+            <label class="field">
+              <span>训练内容</span>
+              <select id="manualCourseGoal">
+                <option value="听 Dora 安排">听 Dora 安排</option>
+                <option value="上肢">上肢</option>
+                <option value="下肢">下肢</option>
+                <option value="全身力量">全身力量</option>
+                <option value="功能性">功能性</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>地点</span>
+              <select id="manualCourseLocation">
+                <option value="">地点待定</option>
+                <option value="235 Grand">235 Grand</option>
+                <option value="Bisby">Bisby</option>
+              </select>
+            </label>
+          </div>
+          <div id="manualCourseMessage" class="message"></div>
+          <div class="submit-row">
+            <button class="ghost" id="cancelManualCourse" type="button">取消</button>
+            <button class="primary" id="saveManualCourse" type="button">添加课程</button>
+          </div>
+        </section>
+      </div>
     </main>
 
     <script src="./firebase-config.js"></script>
@@ -411,6 +454,7 @@
           document.getElementById("coachSchedulePage")?.classList.toggle("active", page === "schedule");
           document.getElementById("coachWorkbenchPage")?.classList.toggle("active", page === "workbench");
           document.getElementById("coachPeoplePage")?.classList.toggle("active", page === "people");
+          document.getElementById("coachPinPage")?.classList.toggle("active", page === "pin");
         }
 
         document.addEventListener("click", function (event) {
