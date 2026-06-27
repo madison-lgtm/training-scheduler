@@ -522,9 +522,10 @@ async function initCloudStore() {
 
   try {
     setSyncStatus("正在连接云端", "syncing");
-    const [{ initializeApp }, firestore] = await Promise.all([
+    const [{ initializeApp }, firestore, auth] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
     ]);
     const {
       getFirestore,
@@ -535,6 +536,10 @@ async function initCloudStore() {
       serverTimestamp,
     } = firestore;
     const app = initializeApp(config.firebase);
+    if (config.authMode === "anonymous") {
+      const { getAuth, signInAnonymously } = auth;
+      await signInAnonymously(getAuth(app));
+    }
     const db = getFirestore(app);
     const [collectionName, documentId] = config.documentPath.split("/");
     const documentRef = doc(db, collectionName, documentId);

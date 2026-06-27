@@ -27,20 +27,27 @@
 2. 点击创建数据库
 3. 先选择 test mode
 4. Location 选择离你们近的区域即可
-5. 创建完成后进入 `Rules`
-6. MVP 试用期可以先用下面规则，之后再升级权限：
+5. 创建完成后，先去 `Authentication` -> `Sign-in method`，打开 `Anonymous` 登录。
+6. 回到 Firestore 的 `Rules`，正式试用时用下面规则：
 
 ```txt
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /training-scheduler/{document=**} {
-      allow read, write: if true;
+    match /training-scheduler/main {
+      allow read, write: if request.auth != null;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
 ```
+
+这会把数据库限制在 `training-scheduler/main` 这个 app 文件里，并要求访问者先由网页匿名登录。
+它适合小范围正式试用；如果以后要严格区分 Dora 和学员，需要再加正式登录或后端权限。
 
 ## 我可以帮你做的部分
 

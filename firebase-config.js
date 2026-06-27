@@ -1,5 +1,6 @@
 window.TRAINING_SCHEDULER_FIREBASE_CONFIG = {
   enabled: true,
+  authMode: "anonymous",
   documentPath: "training-scheduler/main",
   firebase: {
     apiKey: "AIzaSyBdX_yWkmOsqYdNCPcvuvityFTPmSkcVt4",
