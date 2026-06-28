@@ -1973,7 +1973,7 @@ function openManualCoursePrompt(slotKey) {
   }
   manualCourseSlotKey = slotKey;
   if (els.manualCourseTitle) els.manualCourseTitle.textContent = `手动加课 · ${formatSlot(slotKey)}`;
-  if (els.manualCourseName) els.manualCourseName.value = "";
+  renderManualStudentOptions();
   if (els.manualCourseGoal) els.manualCourseGoal.value = FLEX_GOAL;
   const dayId = getDayId(slotKey);
   if (els.manualCourseLocation) els.manualCourseLocation.value = state.draft.dayLocations[dayId] || "";
@@ -1989,20 +1989,65 @@ function closeManualCourseModal() {
 
 function saveManualCourse() {
   if (!manualCourseSlotKey) return;
-  const name = els.manualCourseName?.value.trim() || "";
-  if (!name) {
-    if (els.manualCourseMessage) els.manualCourseMessage.textContent = "先填学员名字。";
+  const selectedStudent = parseManualStudentValue(els.manualCourseName?.value || "");
+  if (!selectedStudent.name) {
+    if (els.manualCourseMessage) els.manualCourseMessage.textContent = "先选择学员。";
     els.manualCourseName?.focus();
     return;
   }
   const goal = normalizeGoal(els.manualCourseGoal?.value || FLEX_GOAL);
   const location = normalizeManualLocation(els.manualCourseLocation?.value || "");
   if (location === null) return;
-  addManualCourse(manualCourseSlotKey, name, goal, location);
+  addManualCourse(manualCourseSlotKey, selectedStudent.name, goal, location, selectedStudent.code);
   closeManualCourseModal();
 }
 
-function addManualCourse(slotKey, name, goal, location) {
+function renderManualStudentOptions() {
+  if (!els.manualCourseName) return;
+  const students = getManualStudentOptions();
+  els.manualCourseName.innerHTML = `
+    <option value="">先选择学员</option>
+    ${students.map((student) => `
+      <option value="${escapeAttribute(formatManualStudentValue(student))}">
+        ${escapeHtml(student.name)}${student.code ? ` · PIN ${escapeHtml(student.code)}` : " · PIN 未填写"}
+      </option>
+    `).join("")}
+  `;
+}
+
+function getManualStudentOptions() {
+  const students = new Map();
+  const addStudent = (item) => {
+    const name = String(item?.name || "").trim();
+    if (!name) return;
+    const code = String(item?.code || "").trim();
+    const key = getRoutineKey(name, code);
+    if (!students.has(key)) students.set(key, { name, code });
+  };
+  getEffectiveRequests().forEach(addStudent);
+  state.draft.assignments.forEach(addStudent);
+  state.draft.unassigned.forEach((item) => addStudent(item.request || item));
+  state.published.forEach(addStudent);
+  return Array.from(students.values()).sort((a, b) => {
+    const nameSort = a.name.localeCompare(b.name, "zh-Hans-u-co-pinyin");
+    if (nameSort !== 0) return nameSort;
+    return a.code.localeCompare(b.code);
+  });
+}
+
+function formatManualStudentValue(student) {
+  return `${encodeURIComponent(student.name)}::${encodeURIComponent(student.code || "")}`;
+}
+
+function parseManualStudentValue(value) {
+  const [name = "", code = ""] = String(value || "").split("::");
+  return {
+    name: decodeURIComponent(name).trim(),
+    code: decodeURIComponent(code).trim(),
+  };
+}
+
+function addManualCourse(slotKey, name, goal, location, code = "") {
   const dayId = getDayId(slotKey);
   if (location) state.draft.dayLocations[dayId] = location;
   const requestId = `manual-${makeId()}`;
@@ -2010,7 +2055,7 @@ function addManualCourse(slotKey, name, goal, location) {
     id: makeId(),
     requestId,
     name: name.trim(),
-    code: "",
+    code,
     goal,
     slotKey,
     location: formatLocation(state.draft.dayLocations[dayId]),
