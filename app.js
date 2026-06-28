@@ -1793,10 +1793,10 @@ async function handleStudentSummaryClick(event) {
   }, 1600);
 }
 
-function confirmDeleteStudent(name, code) {
+async function confirmDeleteStudent(name, code) {
   const label = code ? `${name}（PIN ${code}）` : name;
-  const typed = window.prompt(`删除 ${label} 会移除她的常用安排、当前周申请和草案里的课程。\n\n请输入 delete 确认删除。`, "");
-  if (typed !== "delete") {
+  const typed = window.prompt(`删除 ${label} 会移除她的常用安排、所有周的申请、草案和已发布课程。\n\n请输入 delete 确认删除。`, "");
+  if (String(typed || "").trim().toLowerCase() !== "delete") {
     renderIssue({
       title: "没有删除",
       text: "需要输入 delete 才会真的删除学员资料。",
@@ -1804,12 +1804,20 @@ function confirmDeleteStudent(name, code) {
     }, { focus: false });
     return;
   }
-  deleteStudentProfile(name, code);
-  window.alert(`${label} 已删除。`);
+  const savedToCloud = await deleteStudentProfile(name, code);
+  if (savedToCloud) {
+    window.alert(`${label} 已删除。`);
+  } else {
+    window.alert(`${label} 已在本机删除，但云端保存失败。请检查网络后再试。`);
+  }
 }
 
-function deleteStudentProfile(name, code) {
+async function deleteStudentProfile(name, code) {
+  persistCurrentWeekRefs();
+
   const matches = (item) => matchesStudentIdentity(item, name, code);
+  const matchingIds = new Set();
+
   Object.keys(state.routines || {}).forEach((key) => {
     const routine = state.routines[key];
     const routineName = getNameFromRoutineKey(key, routine);
@@ -1818,21 +1826,114 @@ function deleteStudentProfile(name, code) {
       delete state.routines[key];
     }
   });
-  state.requests = state.requests.filter((item) => !matches(item));
-  state.draft.assignments = state.draft.assignments.filter((item) => !matches(item));
-  state.draft.unassigned = state.draft.unassigned.filter((item) => !matches(item.request || item));
-  state.published = state.published.filter((item) => !matches(item));
+
+  collectMatchingStudentRecordIds(state, matches, matchingIds);
+  Object.keys(state.weeks || {}).forEach((weekKey) => {
+    state.weeks[weekKey] = normalizeWeek(state.weeks[weekKey]);
+    collectMatchingStudentRecordIds(state.weeks[weekKey], matches, matchingIds);
+  });
+
+  const shouldRemove = (item) => {
+    if (!item) return false;
+    const id = getStudentRecordId(item);
+    const nestedId = getStudentRecordId(item.request);
+    return matches(item)
+      || matches(item.request)
+      || (id && matchingIds.has(id))
+      || (nestedId && matchingIds.has(nestedId));
+  };
+
+  removeStudentRecordsFromContainer(state, shouldRemove);
+  Object.keys(state.weeks || {}).forEach((weekKey) => {
+    removeStudentRecordsFromContainer(state.weeks[weekKey], shouldRemove);
+  });
+
+  syncWeekPointers();
   selectedMove = null;
   dragged = null;
-  state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
   saveState();
+  window.clearTimeout(cloudSaveTimer);
+  const savedToCloud = await saveCloudNow();
   renderCoach();
+  return savedToCloud;
+}
+
+function collectMatchingStudentRecordIds(container, matches, ids) {
+  getStudentRecordLists(container).forEach((list) => {
+    list.forEach((item) => {
+      if (matches(item) || matches(item?.request)) {
+        const id = getStudentRecordId(item);
+        const nestedId = getStudentRecordId(item?.request);
+        if (id) ids.add(id);
+        if (nestedId) ids.add(nestedId);
+      }
+    });
+  });
+}
+
+function getStudentRecordLists(container) {
+  if (!container) return [];
+  return [
+    container.requests,
+    container.published,
+    container.draft?.assignments,
+    container.draft?.unassigned,
+  ].filter(Array.isArray);
+}
+
+function removeStudentRecordsFromContainer(container, shouldRemove) {
+  if (!container) return;
+  if (Array.isArray(container.requests)) {
+    container.requests = container.requests.filter((item) => !shouldRemove(item));
+  }
+  if (Array.isArray(container.published)) {
+    container.published = container.published.filter((item) => !shouldRemove(item));
+  }
+  if (container.draft) {
+    if (Array.isArray(container.draft.assignments)) {
+      container.draft.assignments = container.draft.assignments.filter((item) => !shouldRemove(item));
+    }
+    if (Array.isArray(container.draft.unassigned)) {
+      container.draft.unassigned = container.draft.unassigned.filter((item) => !shouldRemove(item));
+    }
+    container.draft.issues = findIssues(
+      container.draft.assignments || [],
+      container.draft.unassigned || [],
+      container.draft.dayLocations || {},
+    );
+  }
 }
 
 function matchesStudentIdentity(item, name, code) {
-  const itemName = normalizeIdentityValue(item?.name);
-  const itemCode = normalizeIdentityValue(item?.code);
-  return itemName === normalizeIdentityValue(name) && itemCode === normalizeIdentityValue(code);
+  const identity = getStudentIdentity(item);
+  const itemName = normalizeIdentityValue(identity.name);
+  const itemCode = normalizeIdentityValue(identity.code);
+  const targetName = normalizeIdentityValue(name);
+  const targetCode = normalizeIdentityValue(code);
+  if (!targetName || itemName !== targetName) return false;
+  return targetCode ? itemCode === targetCode : !itemCode;
+}
+
+function getStudentIdentity(item) {
+  const source = item || {};
+  const request = source.request || {};
+  return {
+    name: request.name ?? request.studentName ?? source.name ?? source.studentName ?? "",
+    code: request.code
+      ?? request.pin
+      ?? request.studentCode
+      ?? request.studentPin
+      ?? source.code
+      ?? source.pin
+      ?? source.studentCode
+      ?? source.studentPin
+      ?? "",
+  };
+}
+
+function getStudentRecordId(item) {
+  if (!item) return "";
+  return String(item.requestId || item.id || item.request?.requestId || item.request?.id || "").trim();
 }
 
 function normalizeIdentityValue(value) {
@@ -3097,7 +3198,7 @@ function persistCurrentWeekRefs() {
 }
 
 async function saveCloudNow() {
-  if (!cloudStore?.ready) return;
+  if (!cloudStore?.ready) return false;
   try {
     setSyncStatus("正在保存", "syncing");
     await cloudStore.setDoc(cloudStore.documentRef, {
@@ -3105,9 +3206,11 @@ async function saveCloudNow() {
       updatedAt: cloudStore.serverTimestamp(),
     }, { merge: true });
     setSyncStatus("云端同步中", "cloud");
+    return true;
   } catch (error) {
     setSyncStatus(`保存失败：${formatCloudError(error)}`, "error");
     console.error("Firebase save failed", error);
+    return false;
   }
 }
 
