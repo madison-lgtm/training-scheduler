@@ -265,22 +265,41 @@ function on(element, eventName, handler) {
 function setupCoachActionMenu() {
   const actionMenus = [els.coachActions, els.studentMoreActions].filter(Boolean);
   if (!actionMenus.length) return;
-  document.addEventListener("click", (event) => {
+
+  const closeOutsideMenus = (target) => {
     actionMenus.forEach((menu) => {
-      if (!menu.open || menu.contains(event.target)) return;
+      if (!menu.open || menu.contains(target)) return;
       menu.open = false;
     });
+  };
+
+  document.addEventListener("pointerdown", (event) => {
+    closeOutsideMenus(event.target);
   });
+
   document.addEventListener("focusin", (event) => {
-    actionMenus.forEach((menu) => {
-      if (!menu.open || menu.contains(event.target)) return;
-      menu.open = false;
-    });
+    closeOutsideMenus(event.target);
   });
+
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    actionMenus.forEach((menu) => {
-      menu.open = false;
+    closeActionMenus();
+  });
+
+  actionMenus.forEach((menu) => {
+    menu.addEventListener("toggle", () => {
+      if (!menu.open) return;
+      actionMenus.forEach((otherMenu) => {
+        if (otherMenu !== menu) otherMenu.open = false;
+      });
+    });
+
+    menu.addEventListener("click", (event) => {
+      if (event.target.closest("summary")) return;
+      if (!event.target.closest("button, a")) return;
+      window.setTimeout(() => {
+        menu.open = false;
+      }, 0);
     });
   });
 }
