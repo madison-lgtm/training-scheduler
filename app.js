@@ -1830,7 +1830,7 @@ function getPreferenceItems(request) {
       goal: request.goals[index] || request.goals[0] || FLEX_GOAL,
     }));
   if (!items.length) return [{ time: "未设置", goal: FLEX_GOAL, location }];
-  return items.map((item) => {
+  return [...items].sort((a, b) => getSlotSortIndex(a.slotKey) - getSlotSortIndex(b.slotKey)).map((item) => {
     const goal = normalizeGoal(item.goal || FLEX_GOAL);
     return {
       time: formatSlotLabel(item.slotKey),
@@ -2909,6 +2909,15 @@ function escapeTextarea(text) {
 
 function allSlotKeys() {
   return DAYS.flatMap((day) => SLOTS.map((slot) => `${day.id}-${slot.id}`));
+}
+
+function getSlotSortIndex(slotKey) {
+  const [dayId, slotId] = String(slotKey || "").split("-");
+  const dayIndex = DAYS.findIndex((day) => day.id === dayId);
+  const slotIndex = SLOTS.findIndex((slot) => slot.id === slotId);
+  const safeDayIndex = dayIndex >= 0 ? dayIndex : DAYS.length;
+  const safeSlotIndex = slotIndex >= 0 ? slotIndex : SLOTS.length;
+  return safeDayIndex * SLOTS.length + safeSlotIndex;
 }
 
 function getTodayDayId() {
