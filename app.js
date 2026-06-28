@@ -1316,6 +1316,12 @@ function expandSessions(requests) {
   });
 }
 
+function isManualDraftItem(item) {
+  const request = item?.request || {};
+  const requestId = String(item?.requestId || request.id || "");
+  return Boolean(item?.manual || request.source === "manual" || requestId.startsWith("manual-"));
+}
+
 function getEffectiveRequests() {
   const weeklyByStudent = new Map(state.requests.map((request) => [getRoutineKey(request.name, request.code), request]));
   const defaults = Object.entries(state.routines || {})
@@ -2140,7 +2146,9 @@ function moveDraggedToUnassigned(event) {
   const assignment = state.draft.assignments[index];
   if (!assignment) return;
   state.draft.assignments.splice(index, 1);
-  state.draft.unassigned.push(buildUnassignedFromAssignment(assignment));
+  if (!isManualDraftItem(assignment)) {
+    state.draft.unassigned.push(buildUnassignedFromAssignment(assignment));
+  }
   normalizeDraftUnassigned();
   dragged = null;
   selectedMove = null;
@@ -2182,10 +2190,12 @@ function clearDraftSchedule() {
   }
   const ok = window.confirm("确定清空当前日历吗？学员申请和常用安排会回到未排入课表，手动添加的课程会移除。");
   if (!ok) return;
-  const rebuilt = expandSessions(getEffectiveRequests()).map((session) => ({
-    ...session,
-    id: makeId(),
-  }));
+  const rebuilt = expandSessions(getEffectiveRequests())
+    .filter((session) => !isManualDraftItem(session))
+    .map((session) => ({
+      ...session,
+      id: makeId(),
+    }));
   state.draft.assignments = [];
   state.draft.unassigned = rebuilt;
   normalizeDraftUnassigned();
@@ -2212,6 +2222,7 @@ function normalizeDraftUnassigned() {
   const pendingCounts = new Map();
   const next = [];
   for (const item of state.draft.unassigned) {
+    if (isManualDraftItem(item)) continue;
     const request = item.request || findEffectiveRequestById(item.requestId);
     const key = getRequestCountKey(item);
     const desired = Math.max(1, Number(request?.desiredCount || item.request?.desiredCount || 1));
