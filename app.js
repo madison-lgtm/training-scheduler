@@ -1703,7 +1703,7 @@ function renderMobileIssues() {
 }
 
 function renderStudentSummary() {
-  const requests = getEffectiveRequests();
+  const requests = [...getEffectiveRequests()].sort(compareStudentRequests);
   if (!requests.length) {
     els.studentSummary.innerHTML = `<div class="empty">还没有学员设置常用安排。</div>`;
     return;
@@ -1818,6 +1818,36 @@ function matchesStudentIdentity(item, name, code) {
 
 function normalizeIdentityValue(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function compareStudentRequests(a, b) {
+  const nameCompare = normalizeIdentityValue(a.name).localeCompare(normalizeIdentityValue(b.name), "zh-Hans", { numeric: true });
+  if (nameCompare) return nameCompare;
+  const codeCompare = getSortableCode(a.code).localeCompare(getSortableCode(b.code), "zh-Hans", { numeric: true });
+  if (codeCompare) return codeCompare;
+  const sourceCompare = getSourceSortIndex(a.source) - getSourceSortIndex(b.source);
+  if (sourceCompare) return sourceCompare;
+  const slotCompare = getRequestFirstSlotSortIndex(a) - getRequestFirstSlotSortIndex(b);
+  if (slotCompare) return slotCompare;
+  return String(a.id || "").localeCompare(String(b.id || ""), "zh-Hans", { numeric: true });
+}
+
+function getSortableCode(code) {
+  const value = normalizeIdentityValue(code);
+  return value || "\uffff";
+}
+
+function getSourceSortIndex(source) {
+  if (source === "default") return 0;
+  if (source === "manual") return 2;
+  return 1;
+}
+
+function getRequestFirstSlotSortIndex(request) {
+  const routine = Array.isArray(request.routine) ? request.routine.filter((item) => item.slotKey) : [];
+  const slotKeys = routine.length ? routine.map((item) => item.slotKey) : (request.availability || []);
+  if (!slotKeys.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...slotKeys.map(getSlotSortIndex));
 }
 
 function getPreferenceItems(request) {
