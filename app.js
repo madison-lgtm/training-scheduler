@@ -2180,17 +2180,14 @@ function clearDraftSchedule() {
     }, { focus: false });
     return;
   }
-  const ok = window.confirm("确定把当前草案里的课程全部放回未排入课表吗？学员申请和常用安排会保留。");
+  const ok = window.confirm("确定清空当前日历吗？学员申请和常用安排会回到未排入课表，手动添加的课程会移除。");
   if (!ok) return;
   const rebuilt = expandSessions(getEffectiveRequests()).map((session) => ({
     ...session,
     id: makeId(),
   }));
-  const manualSessions = state.draft.assignments
-    .filter((assignment) => assignment.manual || !findEffectiveRequestById(assignment.requestId))
-    .map(buildUnassignedFromAssignment);
   state.draft.assignments = [];
-  state.draft.unassigned = [...rebuilt, ...manualSessions];
+  state.draft.unassigned = rebuilt;
   normalizeDraftUnassigned();
   selectedMove = null;
   dragged = null;
