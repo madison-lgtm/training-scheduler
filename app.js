@@ -986,7 +986,7 @@ function renderRequestPreview() {
           <p><b>内容</b><span>${goalLine}</span></p>
           <p><b>地点</b><span>${locationLine}</span></p>
         </div>
-        <p class="success-copy">等 Dora 发布课程后，回到「我的训练」就能看到确定的上课时间。</p>
+        <p class="success-copy">状态：等待 Dora 确认。确认后会显示在「我的训练」。</p>
       ` : `
         <span>提交前确认</span>
         <strong>${escapeHtml(request.name || "还没填名字")} · 想上 ${request.desiredCount} 节</strong>
