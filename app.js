@@ -594,6 +594,13 @@ function canLeaveStudentStep(step) {
     els.studentMessage.textContent = "先填名字或昵称。";
     return false;
   }
+  if (step === 0 && !isValidStudentPin(els.studentCode.value)) {
+    els.studentMessage.textContent = "请填写 4 位数字 PIN。以后就算名字改了，也能用 PIN 找到你的安排。";
+    return false;
+  }
+  if (step === 0 && !confirmStudentPinOwner()) {
+    return false;
+  }
   if (step === 3 && !selectedAvailability.size) {
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
     return false;
@@ -787,12 +794,23 @@ function renderAvailability() {
 }
 
 function submitStudentRequest() {
-  const name = els.studentName.value.trim();
+  let name = els.studentName.value.trim();
+  const code = normalizeStudentPin(els.studentCode.value);
   if (!name) {
     setStudentStep(0);
     els.studentMessage.textContent = "先填名字或昵称。";
     return;
   }
+  if (!isValidStudentPin(code)) {
+    setStudentStep(0);
+    els.studentMessage.textContent = "请填写 4 位数字 PIN。Dora 会用它确认这是你的申请。";
+    return;
+  }
+  if (!confirmStudentPinOwner(name, code)) {
+    setStudentStep(0);
+    return;
+  }
+  name = els.studentName.value.trim();
   if (!selectedAvailability.size) {
     setStudentStep(3);
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
@@ -811,7 +829,7 @@ function submitStudentRequest() {
   const request = {
     id: makeId(),
     name,
-    code: els.studentCode.value.trim(),
+    code,
     desiredCount,
     goals: buildGoalsForCount(desiredCount),
     goalPreferences: [...selectedGoals],
@@ -822,7 +840,7 @@ function submitStudentRequest() {
     submittedAt: new Date().toISOString(),
   };
 
-  state.requests = state.requests.filter((item) => item.name !== name || item.code !== request.code);
+  state.requests = dedupeRequestsByPin(state.requests.filter((item) => normalizeStudentPin(getStudentIdentity(item).code) !== request.code));
   state.requests.push(request);
   syncRequestIntoDraft(request);
   saveState();
@@ -837,10 +855,12 @@ function submitStudentRequest() {
 }
 
 function saveRoutine(name, request) {
-  const key = getRoutineKey(name, request.code || els.studentCode.value.trim());
+  const code = normalizeStudentPin(request.code || els.studentCode.value);
+  const key = getRoutineKey(name, code);
+  removeRoutineByPin(code);
   state.routines[key] = {
     studentName: name,
-    code: request.code || els.studentCode.value.trim(),
+    code,
     routine: request.routine,
     locations: request.locations,
     goals: request.goals,
@@ -850,7 +870,14 @@ function saveRoutine(name, request) {
 
 function getSavedRoutine() {
   const name = els.studentName.value.trim();
-  const code = els.studentCode.value.trim();
+  const code = normalizeStudentPin(els.studentCode.value);
+  if (code) {
+    const byPin = Object.entries(state.routines || {}).find(([key, routine]) => {
+      const routineCode = routine?.code || String(key).split("::")[1] || "";
+      return normalizeStudentPin(routineCode) === code;
+    });
+    if (byPin) return byPin[1];
+  }
   return state.routines[getRoutineKey(name, code)] || state.routines[name] || null;
 }
 
@@ -902,11 +929,21 @@ function renderDefaultSummary() {
 }
 
 function saveDefaultRoutine() {
-  const name = els.studentName.value.trim();
+  let name = els.studentName.value.trim();
+  const code = normalizeStudentPin(els.studentCode.value);
   if (!name) {
     els.studentMessage.textContent = "先填名字或昵称。";
     return;
   }
+  if (!isValidStudentPin(code)) {
+    setStudentStep(0);
+    els.studentMessage.textContent = "请填写 4 位数字 PIN。Dora 会用它确认这是你的常用安排。";
+    return;
+  }
+  if (!confirmStudentPinOwner(name, code)) {
+    return;
+  }
+  name = els.studentName.value.trim();
   const routine = getRoutineRows()
     .filter((row) => !row.classList.contains("is-hidden"))
     .map((row) => ({
@@ -924,7 +961,7 @@ function saveDefaultRoutine() {
     return;
   }
   const requestLike = {
-    code: els.studentCode.value.trim(),
+    code,
     routine,
     locations,
     goals: routine.map((item) => normalizeGoal(item.goal)),
@@ -1055,6 +1092,7 @@ function buildDraftRequestPreview() {
   const desiredCount = Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
   return {
     name: els.studentName.value.trim(),
+    code: normalizeStudentPin(els.studentCode.value),
     desiredCount,
     goals: buildGoalsForCount(desiredCount),
     locations: [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value),
@@ -1068,11 +1106,12 @@ function getRoutineLocations() {
 
 function renderMySchedule() {
   const name = els.studentName.value.trim();
-  const code = els.studentCode.value.trim();
-  if (!name) {
+  const code = normalizeStudentPin(els.studentCode.value);
+  if (!name || !code) {
     els.mySchedule.innerHTML = `<div class="schedule-home-state is-empty">
-      <span>先输入名字</span>
+      <span>先输入名字和 PIN</span>
       <strong>这里会显示你的训练安排</strong>
+      <small>PIN 是你的识别码，名字改了也能找回自己的安排。</small>
     </div>`;
     return;
   }
@@ -1087,6 +1126,24 @@ function renderMySchedule() {
             <span>${item.goal} · ${item.location}</span>
           </article>
         `).join("")}
+      </div>
+    `;
+    return;
+  }
+  const request = findCurrentStudentRequest(code);
+  if (request) {
+    els.mySchedule.innerHTML = `
+      <div class="schedule-home-note is-routine"><span>特殊申请已提交</span></div>
+      <div class="schedule-home-items">
+        ${request.availability.map((slotKey, index) => `
+          <article class="schedule-card">
+            <strong>${formatSlot(slotKey)}</strong>
+            <span>${normalizeGoal(request.goals?.[index] || request.goals?.[0])} · ${(request.locations || []).join(" / ") || "地点待定"}</span>
+          </article>
+        `).join("")}
+      </div>
+      <div class="schedule-home-state">
+        <small>这周 Dora 会优先看这份特殊申请；如果要改时间，可以重新提交一次，旧申请会自动替换。</small>
       </div>
     `;
     return;
@@ -1116,8 +1173,11 @@ function renderMySchedule() {
 }
 
 function assignmentMatchesStudent(assignment, name, code) {
+  if (code) {
+    const assignmentCode = assignment.code || findEffectiveRequestById(assignment.requestId)?.code || "";
+    return normalizeStudentPin(assignmentCode) === normalizeStudentPin(code);
+  }
   if (assignment.name !== name) return false;
-  if (!code) return true;
   const assignmentCode = assignment.code || findEffectiveRequestById(assignment.requestId)?.code || "";
   return assignmentCode === code;
 }
@@ -1342,12 +1402,13 @@ function isManualDraftItem(item) {
 }
 
 function getEffectiveRequests() {
-  const weeklyByStudent = new Map(state.requests.map((request) => [getRoutineKey(request.name, request.code), request]));
+  state.requests = dedupeRequestsByPin(state.requests || []);
+  const weeklyByStudent = new Map(state.requests.map((request) => [getStudentRequestIdentityKey(request), request]));
   const defaults = Object.entries(state.routines || {})
     .filter(([key, routine]) => !isDeletedStudentProfile(key, routine))
     .map(([key, routine]) => buildRequestFromRoutine(key, routine))
     .filter(Boolean)
-    .filter((request) => !weeklyByStudent.has(getRoutineKey(request.name, request.code)));
+    .filter((request) => !weeklyByStudent.has(getStudentRequestIdentityKey(request)));
   return defaults.concat(state.requests);
 }
 
@@ -1929,11 +1990,11 @@ function removeStudentRecordsFromContainer(container, shouldRemove) {
 function matchesStudentIdentity(item, name, code) {
   const identity = getStudentIdentity(item);
   const itemName = normalizeIdentityValue(identity.name);
-  const itemCode = normalizeIdentityValue(identity.code);
+  const itemCode = normalizeStudentPin(identity.code);
   const targetName = normalizeIdentityValue(name);
-  const targetCode = normalizeIdentityValue(code);
-  if (!targetName || itemName !== targetName) return false;
-  return targetCode ? itemCode === targetCode : !itemCode;
+  const targetCode = normalizeStudentPin(code);
+  if (targetCode) return itemCode === targetCode;
+  return Boolean(targetName) && itemName === targetName;
 }
 
 function getStudentIdentity(item) {
@@ -2037,6 +2098,96 @@ function pruneDeletedStudentProfiles(container) {
 
 function normalizeIdentityValue(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizeStudentPin(value) {
+  return String(value || "").trim();
+}
+
+function isValidStudentPin(value) {
+  return /^\d{4}$/.test(normalizeStudentPin(value));
+}
+
+function findStudentByPin(code) {
+  const targetCode = normalizeStudentPin(code);
+  if (!targetCode) return null;
+  for (const [key, routine] of Object.entries(state.routines || {})) {
+    const routineCode = normalizeStudentPin(routine?.code || String(key).split("::")[1] || "");
+    const routineName = getNameFromRoutineKey(key, routine);
+    if (routineCode === targetCode && routineName) return { name: routineName, code: targetCode };
+  }
+  const request = dedupeRequestsByPin(state.requests || []).find((item) => normalizeStudentPin(item.code) === targetCode);
+  if (request?.name) return { name: request.name, code: targetCode };
+  return null;
+}
+
+function confirmStudentPinOwner(name = els.studentName.value.trim(), code = els.studentCode.value.trim()) {
+  const targetName = normalizeIdentityValue(name);
+  const owner = findStudentByPin(code);
+  if (!owner || normalizeIdentityValue(owner.name) === targetName) return true;
+  const confirmed = window.confirm(`这个 PIN 已经属于 ${owner.name}。你是 ${owner.name} 吗？`);
+  if (confirmed) {
+    els.studentName.value = owner.name;
+    els.studentMessage.textContent = `已用 PIN 找到 ${owner.name} 的资料。`;
+    loadRoutineForName();
+    renderDefaultSummary();
+    renderMySchedule();
+    return true;
+  }
+  els.studentMessage.textContent = "这个 PIN 已经有人在使用。请确认自己的 PIN，或换一个新的 4 位 PIN。";
+  return false;
+}
+
+function getStudentRequestIdentityKey(request) {
+  const identity = getStudentIdentity(request);
+  const code = normalizeStudentPin(identity.code);
+  return code ? `pin:${code}` : `name:${normalizeIdentityValue(identity.name)}`;
+}
+
+function dedupeRequestsByPin(requests) {
+  const byStudent = new Map();
+  (Array.isArray(requests) ? requests : []).forEach((request) => {
+    const key = getStudentRequestIdentityKey(request);
+    const existing = byStudent.get(key);
+    if (!existing || String(request.submittedAt || "") >= String(existing.submittedAt || "")) {
+      byStudent.set(key, request);
+    }
+  });
+  return Array.from(byStudent.values());
+}
+
+function findCurrentStudentRequest(code) {
+  const targetCode = normalizeStudentPin(code);
+  if (!targetCode) return null;
+  return dedupeRequestsByPin(state.requests || []).find((request) => normalizeStudentPin(request.code) === targetCode) || null;
+}
+
+function removeRoutineByPin(code) {
+  const targetCode = normalizeStudentPin(code);
+  if (!targetCode) return;
+  Object.keys(state.routines || {}).forEach((key) => {
+    const routine = state.routines[key];
+    const routineCode = normalizeStudentPin(routine?.code || String(key).split("::")[1] || "");
+    if (routineCode === targetCode) delete state.routines[key];
+  });
+}
+
+function pruneOrphanedDraftEntries(container) {
+  const defaultRequestIds = new Set(Object.entries(container.routines || {})
+    .filter(([key, routine]) => !isDeletedStudentProfile(key, routine, container))
+    .map(([key, routine]) => `default-${encodeURIComponent(getRoutineKey(getNameFromRoutineKey(key, routine), routine?.code || String(key).split("::")[1] || ""))}`));
+  Object.values(container.weeks || {}).forEach((week) => {
+    const validIds = new Set([...(week.requests || []).map((request) => request.id), ...defaultRequestIds].filter(Boolean));
+    const keep = (item) => {
+      const id = getStudentRecordId(item);
+      if (!id || id.startsWith("manual-")) return true;
+      return validIds.has(id);
+    };
+    if (week.draft) {
+      if (Array.isArray(week.draft.assignments)) week.draft.assignments = week.draft.assignments.filter(keep);
+      if (Array.isArray(week.draft.unassigned)) week.draft.unassigned = week.draft.unassigned.filter((item) => keep(item.request || item));
+    }
+  });
 }
 
 function compareStudentRequests(a, b) {
@@ -3234,6 +3385,7 @@ function normalizeState(saved) {
   }
   Object.keys(weeks).forEach((weekKey) => {
     weeks[weekKey] = normalizeWeek(weeks[weekKey]);
+    weeks[weekKey].requests = dedupeRequestsByPin(weeks[weekKey].requests);
   });
   const normalized = {
     currentWeekKey,
@@ -3243,6 +3395,7 @@ function normalizeState(saved) {
     coachNotes: isPlainObject(saved.coachNotes) ? saved.coachNotes : {},
   };
   pruneDeletedStudentProfiles(normalized);
+  pruneOrphanedDraftEntries(normalized);
   if (!normalized.weeks[normalized.currentWeekKey]) normalized.weeks[normalized.currentWeekKey] = createEmptyWeek();
   normalized.weeks[normalized.currentWeekKey] = normalizeWeek(normalized.weeks[normalized.currentWeekKey]);
   const week = normalized.weeks[normalized.currentWeekKey];

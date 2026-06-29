@@ -84,7 +84,7 @@
               </label>
               <label class="field">
                 <span>识别码</span>
-                <input id="studentCode" placeholder="比如手机号后四位" />
+                <input id="studentCode" inputmode="numeric" maxlength="4" pattern="\d{4}" placeholder="4 位 PIN" />
               </label>
             </div>
           </section>
@@ -480,6 +480,6 @@
         });
       })();
     </script>
-    <script src="./app.js?v=delete-profile-fix-20260628b"></script>
+    <script src="./app.js?v=student-pin-requests-20260628"></script>
   </body>
 </html>
