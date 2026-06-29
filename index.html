@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Dora Training" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Dora Training</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=student-priority-20260629" />
   </head>
   <body data-view="role">
     <main class="app">
@@ -169,18 +169,8 @@
             <div class="step-heading">
               <span>1</span>
               <div>
-                <h3>有空时间</h3>
-                <p>尽量多选，会更好安排。</p>
-              </div>
-            </div>
-            <div class="availability-grid" id="availabilityGrid"></div>
-          </section>
-
-          <section class="student-step" data-step="4">
-            <div class="step-heading">
-              <span>2</span>
-              <div>
                 <h3>想上几次 / 想练什么</h3>
+                <p>上几次会决定最多可以标几个优先时间。</p>
               </div>
             </div>
             <div class="weekly-intent compact-intent">
@@ -196,6 +186,17 @@
               </label>
             </div>
             <div class="goal-picker" id="sessionGoals"></div>
+          </section>
+
+          <section class="student-step" data-step="4">
+            <div class="step-heading">
+              <span>2</span>
+              <div>
+                <h3>有空时间</h3>
+                <p>尽量多选；右上角可以标优先。</p>
+              </div>
+            </div>
+            <div class="availability-grid" id="availabilityGrid"></div>
           </section>
 
           <section class="student-step" data-step="5">
@@ -480,6 +481,6 @@
         });
       })();
     </script>
-    <script src="./app.js?v=student-pin-requests-20260628"></script>
+    <script src="./app.js?v=student-priority-20260629"></script>
   </body>
 </html>

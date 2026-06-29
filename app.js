@@ -16,7 +16,7 @@ const LOCATIONS = ["235 Grand", "Bisby"];
 const STORAGE_KEY = "training-scheduler-mvp-v1";
 const DEFAULT_COACH_PIN = "2468";
 const CAPACITY = 2;
-const STUDENT_STEPS = ["身份", "安排", "常用", "时间", "内容", "地点", "确认"];
+const STUDENT_STEPS = ["身份", "安排", "常用", "内容", "时间", "地点", "确认"];
 
 document.addEventListener("click", (event) => {
   const trigger = event.target.closest("[data-view-target]");
@@ -53,6 +53,7 @@ function navigateView(name) {
 
 let state = loadState();
 let selectedAvailability = new Set();
+let selectedPreferredAvailability = new Set();
 let selectedGoals = new Set([FLEX_GOAL]);
 let lastSubmittedRequest = null;
 let currentStudentStep = 0;
@@ -361,6 +362,8 @@ function handleSessionCountClick(event) {
     els.sessionCount.value = event.currentTarget.value;
     renderSessionCountOptions();
     renderSessionGoals();
+    trimPreferredAvailability();
+    renderAvailability();
     return;
   }
   const button = event.target.closest("[data-session-count]");
@@ -368,6 +371,8 @@ function handleSessionCountClick(event) {
   els.sessionCount.value = button.dataset.sessionCount;
   renderSessionCountOptions();
   renderSessionGoals();
+  trimPreferredAvailability();
+  renderAvailability();
 }
 
 function renderSessionCountOptions() {
@@ -408,6 +413,7 @@ function setWeekKey(weekKey) {
   syncWeekPointers();
   resetStudentWeekFlow();
   selectedAvailability = new Set();
+  selectedPreferredAvailability = new Set();
   selectedGoals = new Set([FLEX_GOAL]);
   fillSelects();
   loadRoutineForName();
@@ -526,8 +532,8 @@ function renderStudentSteps() {
 function getStudentStepHelper(step) {
   if (step === 1) return "看已发布课程和常用安排；照常不用操作。";
   if (step === 2) return "设置一次后，照常的周不用再提交。";
-  if (step === 3) return "多点几个可选时间，Dora 会更好安排。";
-  if (step === 4) return "选择次数和训练重点。";
+  if (step === 3) return "先选择次数和训练重点。";
+  if (step === 4) return "多点几个可选时间；优先时间最多和上课次数一样多。";
   if (step === 5) return "地点是偏好，不是最终确认地点。";
   if (step === 6) return "确认无误后提交给 Dora。";
   return "先输入名字和识别码。";
@@ -601,7 +607,7 @@ function canLeaveStudentStep(step) {
   if (step === 0 && !confirmStudentPinOwner()) {
     return false;
   }
-  if (step === 3 && !selectedAvailability.size) {
+  if (step === 4 && !selectedAvailability.size) {
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
     return false;
   }
@@ -766,6 +772,8 @@ function trimGoalSelection(count) {
 }
 
 function renderAvailability() {
+  trimPreferredAvailability();
+  const preferredLimit = getPreferredAvailabilityLimit();
   els.availabilityGrid.innerHTML = `
     <div class="head">时间</div>
     ${DAYS.map((day, index) => `<div class="head">${day.label}<br><span>${formatMonthDay(getDayDate(index))}</span></div>`).join("")}
@@ -773,24 +781,76 @@ function renderAvailability() {
       <div class="time">${slot.label}<br><span>${slot.detail}</span></div>
       ${DAYS.map((day, dayIndex) => {
         const key = `${day.id}-${slot.id}`;
-        return `<button class="slot-toggle ${selectedAvailability.has(key) ? "selected" : ""}" data-availability="${key}">
+        const selected = selectedAvailability.has(key);
+        const preferred = selectedPreferredAvailability.has(key);
+        return `<div class="slot-toggle ${selected ? "selected" : ""} ${preferred ? "preferred" : ""}" data-availability="${key}" role="button" tabindex="0">
+          <button class="slot-priority-toggle" type="button" data-preferred-availability="${key}" aria-pressed="${preferred}" aria-label="${preferred ? "取消优先" : "标为优先"}">${preferred ? "优先" : "设优先"}</button>
           <small>${day.label} ${formatMonthDay(getDayDate(dayIndex))}</small>
           <strong>${slot.label}</strong>
           <span>${slot.detail}</span>
-          <em>${selectedAvailability.has(key) ? "已勾选" : "可选"}</em>
-        </button>`;
+          <em>${preferred ? "优先" : selected ? "可用" : "可选"}</em>
+        </div>`;
       }).join("")}
     `).join("")}
+    <div class="availability-helper">已标 ${selectedPreferredAvailability.size}/${preferredLimit} 个优先；先点时间选可用，再点右上角设优先。</div>
   `;
 
-  els.availabilityGrid.querySelectorAll("[data-availability]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const key = button.dataset.availability;
-      if (selectedAvailability.has(key)) selectedAvailability.delete(key);
-      else selectedAvailability.add(key);
+  els.availabilityGrid.querySelectorAll("[data-preferred-availability]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      togglePreferredAvailability(button.dataset.preferredAvailability);
       renderAvailability();
     });
   });
+  els.availabilityGrid.querySelectorAll("[data-availability]").forEach((card) => {
+    card.addEventListener("click", () => {
+      toggleAvailability(card.dataset.availability);
+      renderAvailability();
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      toggleAvailability(card.dataset.availability);
+      renderAvailability();
+    });
+  });
+}
+
+function toggleAvailability(key) {
+  if (!key) return;
+  if (els.studentMessage) els.studentMessage.textContent = "";
+  if (selectedAvailability.has(key)) {
+    selectedAvailability.delete(key);
+    selectedPreferredAvailability.delete(key);
+    return;
+  }
+  selectedAvailability.add(key);
+}
+
+function togglePreferredAvailability(key) {
+  if (!key) return;
+  const preferredLimit = getPreferredAvailabilityLimit();
+  if (els.studentMessage) els.studentMessage.textContent = "";
+  if (!selectedAvailability.has(key)) {
+    selectedAvailability.add(key);
+  }
+  if (!selectedPreferredAvailability.has(key)) {
+    if (selectedPreferredAvailability.size < preferredLimit) selectedPreferredAvailability.add(key);
+    else if (els.studentMessage) els.studentMessage.textContent = `最多标 ${preferredLimit} 个优先时间。`;
+    return;
+  }
+  selectedPreferredAvailability.delete(key);
+}
+
+function getPreferredAvailabilityLimit() {
+  return Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
+}
+
+function trimPreferredAvailability() {
+  const preferredLimit = getPreferredAvailabilityLimit();
+  selectedPreferredAvailability = new Set([...selectedPreferredAvailability]
+    .filter((slotKey) => selectedAvailability.has(slotKey))
+    .slice(0, preferredLimit));
 }
 
 function submitStudentRequest() {
@@ -812,7 +872,7 @@ function submitStudentRequest() {
   }
   name = els.studentName.value.trim();
   if (!selectedAvailability.size) {
-    setStudentStep(3);
+    setStudentStep(4);
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
     return;
   }
@@ -825,6 +885,9 @@ function submitStudentRequest() {
   }
 
   const desiredCount = Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
+  const preferredAvailability = [...selectedPreferredAvailability]
+    .filter((slotKey) => selectedAvailability.has(slotKey))
+    .slice(0, desiredCount);
 
   const request = {
     id: makeId(),
@@ -835,6 +898,7 @@ function submitStudentRequest() {
     goalPreferences: [...selectedGoals],
     locations,
     availability: [...selectedAvailability],
+    preferredAvailability,
     notes: els.studentNotes.value.trim(),
     routine: [],
     submittedAt: new Date().toISOString(),
@@ -1009,6 +1073,7 @@ function applyRoutineToWeeklyForm(routine) {
     selectedGoals = new Set((routine.goalPreferences || routine.goals || [FLEX_GOAL]).map(normalizeGoal));
     renderSessionGoals();
     selectedAvailability = new Set(routine.routine.map((item) => item.slotKey).filter(Boolean));
+    selectedPreferredAvailability = new Set();
     renderAvailability();
   }
 }
@@ -1030,6 +1095,7 @@ function renderRequestPreview() {
   const submitted = Boolean(lastSubmittedRequest);
   const weekLabel = getWeekRangeLabel();
   const timeLine = request.availability.length ? request.availability.map(formatSlot).map(escapeHtml).join(" / ") : "还没选择";
+  const preferredLine = request.preferredAvailability?.length ? request.preferredAvailability.map(formatSlot).map(escapeHtml).join(" / ") : "未特别标记";
   const goalLine = request.goals.length ? request.goals.map((goal) => escapeHtml(normalizeGoal(goal))).join(" / ") : "听 Dora 安排";
   const locationLine = request.locations.length ? request.locations.map(escapeHtml).join(" / ") : "还没选择";
   els.requestPreview.innerHTML = `
@@ -1039,6 +1105,7 @@ function renderRequestPreview() {
         <h3>申请已提交</h3>
         <div class="submission-lines">
           <p><b>时间</b><span>${timeLine}</span></p>
+          <p><b>优先</b><span>${preferredLine}</span></p>
           <p><b>内容</b><span>${goalLine}</span></p>
           <p><b>地点</b><span>${locationLine}</span></p>
         </div>
@@ -1048,6 +1115,7 @@ function renderRequestPreview() {
         <strong>${escapeHtml(request.name || "还没填名字")} · 想上 ${request.desiredCount} 节</strong>
         <p class="success-copy">确认你正在提交 ${weekLabel} 的申请。</p>
         <p>时间：${timeLine}</p>
+        <p>优先：${preferredLine}</p>
         <p>内容：${goalLine}</p>
         <p>地点：${locationLine}</p>
       `}
@@ -1071,7 +1139,7 @@ function renderRequestPreview() {
   on(els.requestPreview.querySelector("[data-edit-submission]"), "click", () => {
     lastSubmittedRequest = null;
     weeklyEditMode = true;
-    setStudentStep(3);
+    setStudentStep(4);
   });
 }
 
@@ -1097,6 +1165,7 @@ function buildDraftRequestPreview() {
     goals: buildGoalsForCount(desiredCount),
     locations: [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value),
     availability: [...selectedAvailability],
+    preferredAvailability: [...selectedPreferredAvailability].filter((slotKey) => selectedAvailability.has(slotKey)).slice(0, desiredCount),
   };
 }
 
@@ -1137,7 +1206,7 @@ function renderMySchedule() {
       <div class="schedule-home-items">
         ${request.availability.map((slotKey, index) => `
           <article class="schedule-card">
-            <strong>${formatSlot(slotKey)}</strong>
+            <strong>${formatSlot(slotKey)}${request.preferredAvailability?.includes(slotKey) ? " · 优先" : ""}</strong>
             <span>${normalizeGoal(request.goals?.[index] || request.goals?.[0])} · ${(request.locations || []).join(" / ") || "地点待定"}</span>
           </article>
         `).join("")}
@@ -1452,6 +1521,7 @@ function scoreSlot(session, slotKey, assignments) {
   const slotAssignments = assignments.filter((item) => item.slotKey === slotKey);
   const routineMatch = session.request.routine?.some((item) => item.slotKey === slotKey);
   if (routineMatch) score += 5;
+  if (session.request.preferredAvailability?.includes(slotKey)) score += 4;
   if (!slotAssignments.length) score += 1;
   for (const item of slotAssignments) {
     score += compatibility(session.goal, item.goal);
@@ -1809,7 +1879,7 @@ function renderStudentSummary() {
         <div class="student-preference-stack">
           ${preferenceItems.map((item, index) => `
             <section class="student-preference-card">
-              <span>偏好 ${index + 1}</span>
+              <span>${item.preferred ? "优先" : `偏好 ${index + 1}`}</span>
               <dl>
                 <div>
                   <dt>时间 / 地点</dt>
@@ -2230,12 +2300,16 @@ function getPreferenceItems(request) {
       goal: request.goals[index] || request.goals[0] || FLEX_GOAL,
     }));
   if (!items.length) return [{ time: "未设置", goal: FLEX_GOAL, location }];
-  return [...items].sort((a, b) => getSlotSortIndex(a.slotKey) - getSlotSortIndex(b.slotKey)).map((item) => {
+  return [...items].sort((a, b) => {
+    const preferredDelta = Number(request.preferredAvailability?.includes(b.slotKey) || false) - Number(request.preferredAvailability?.includes(a.slotKey) || false);
+    return preferredDelta || getSlotSortIndex(a.slotKey) - getSlotSortIndex(b.slotKey);
+  }).map((item) => {
     const goal = normalizeGoal(item.goal || FLEX_GOAL);
     return {
       time: formatSlotLabel(item.slotKey),
       goal,
       location,
+      preferred: request.preferredAvailability?.includes(item.slotKey) || false,
     };
   });
 }
