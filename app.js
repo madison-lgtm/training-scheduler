@@ -695,7 +695,7 @@ function formatCloudError(error) {
 function applyRemoteState(remoteState) {
   if (!remoteState) return;
   const localWeekKey = state.currentWeekKey;
-  const nextState = normalizeState(remoteState);
+  const nextState = normalizeState(mergeDeletedStudentProfiles(remoteState, state));
   nextState.currentWeekKey = localWeekKey || nextState.currentWeekKey;
   if (!isPlainObject(nextState.weeks)) nextState.weeks = {};
   if (!nextState.weeks[nextState.currentWeekKey]) nextState.weeks[nextState.currentWeekKey] = createEmptyWeek();
@@ -1344,6 +1344,7 @@ function isManualDraftItem(item) {
 function getEffectiveRequests() {
   const weeklyByStudent = new Map(state.requests.map((request) => [getRoutineKey(request.name, request.code), request]));
   const defaults = Object.entries(state.routines || {})
+    .filter(([key, routine]) => !isDeletedStudentProfile(key, routine))
     .map(([key, routine]) => buildRequestFromRoutine(key, routine))
     .filter(Boolean)
     .filter((request) => !weeklyByStudent.has(getRoutineKey(request.name, request.code)));
@@ -1741,7 +1742,7 @@ function renderStudentSummary() {
           <div class="student-code-line">
             <small>PIN：${code || "未填写"}</small>
             ${code ? `<button type="button" data-copy-code="${escapeAttribute(code)}">复制</button>` : ""}
-            <button class="danger-lite" type="button" data-delete-student-name="${escapeAttribute(request.name)}" data-delete-student-code="${escapeAttribute(code)}">删除</button>
+            <button class="danger-lite" type="button" data-delete-student-name="${escapeAttribute(request.name)}" data-delete-student-code="${escapeAttribute(code)}" data-delete-student-id="${escapeAttribute(request.id || "")}">删除</button>
           </div>
         </header>
         <div class="student-preference-stack">
@@ -1773,7 +1774,15 @@ async function handleStudentSummaryClick(event) {
   if (deleteButton && els.studentSummary.contains(deleteButton)) {
     event.preventDefault();
     event.stopPropagation();
-    confirmDeleteStudent(deleteButton.dataset.deleteStudentName || "", deleteButton.dataset.deleteStudentCode || "");
+    if (deleteButton.dataset.confirmDelete !== "true") {
+      armStudentDeleteButton(deleteButton);
+      return;
+    }
+    await confirmDeleteStudent(
+      deleteButton.dataset.deleteStudentName || "",
+      deleteButton.dataset.deleteStudentCode || "",
+      deleteButton.dataset.deleteStudentId || "",
+    );
     return;
   }
 
@@ -1793,18 +1802,19 @@ async function handleStudentSummaryClick(event) {
   }, 1600);
 }
 
-async function confirmDeleteStudent(name, code) {
+function armStudentDeleteButton(button) {
+  button.dataset.confirmDelete = "true";
+  button.textContent = "确认删除";
+  window.clearTimeout(button._confirmDeleteTimer);
+  button._confirmDeleteTimer = window.setTimeout(() => {
+    button.dataset.confirmDelete = "";
+    button.textContent = "删除";
+  }, 4000);
+}
+
+async function confirmDeleteStudent(name, code, requestId = "") {
   const label = code ? `${name}（PIN ${code}）` : name;
-  const typed = window.prompt(`删除 ${label} 会移除她的常用安排、所有周的申请、草案和已发布课程。\n\n请输入 delete 确认删除。`, "");
-  if (String(typed || "").trim().toLowerCase() !== "delete") {
-    renderIssue({
-      title: "没有删除",
-      text: "需要输入 delete 才会真的删除学员资料。",
-      severity: "review",
-    }, { focus: false });
-    return;
-  }
-  const savedToCloud = await deleteStudentProfile(name, code);
+  const savedToCloud = await deleteStudentProfile(name, code, requestId);
   if (savedToCloud) {
     window.alert(`${label} 已删除。`);
   } else {
@@ -1812,11 +1822,22 @@ async function confirmDeleteStudent(name, code) {
   }
 }
 
-async function deleteStudentProfile(name, code) {
+async function deleteStudentProfile(name, code, requestId = "") {
   persistCurrentWeekRefs();
 
   const matches = (item) => matchesStudentIdentity(item, name, code);
   const matchingIds = new Set();
+  const targetRecordId = String(requestId || "").trim();
+  const routineKeyFromId = getRoutineKeyFromDefaultRequestId(targetRecordId);
+  const deletedKeys = getDeletedStudentProfileKeys(name, code, requestId);
+
+  markDeletedStudentProfiles(deletedKeys);
+
+  if (targetRecordId) matchingIds.add(targetRecordId);
+  deletedKeys.forEach((key) => matchingIds.add(`default-${encodeURIComponent(key)}`));
+  if (routineKeyFromId && state.routines && Object.prototype.hasOwnProperty.call(state.routines, routineKeyFromId)) {
+    delete state.routines[routineKeyFromId];
+  }
 
   Object.keys(state.routines || {}).forEach((key) => {
     const routine = state.routines[key];
@@ -1847,6 +1868,7 @@ async function deleteStudentProfile(name, code) {
   Object.keys(state.weeks || {}).forEach((weekKey) => {
     removeStudentRecordsFromContainer(state.weeks[weekKey], shouldRemove);
   });
+  pruneDeletedStudentProfiles(state);
 
   syncWeekPointers();
   selectedMove = null;
@@ -1934,6 +1956,83 @@ function getStudentIdentity(item) {
 function getStudentRecordId(item) {
   if (!item) return "";
   return String(item.requestId || item.id || item.request?.requestId || item.request?.id || "").trim();
+}
+
+function getRoutineKeyFromDefaultRequestId(requestId) {
+  if (!String(requestId || "").startsWith("default-")) return "";
+  try {
+    return decodeURIComponent(String(requestId).slice("default-".length));
+  } catch {
+    return "";
+  }
+}
+
+function getDeletedStudentProfileKeys(name, code, requestId = "") {
+  const keys = new Set();
+  const routineKeyFromId = getRoutineKeyFromDefaultRequestId(requestId);
+  if (routineKeyFromId) keys.add(routineKeyFromId);
+  const routineKey = getRoutineKey(name, code);
+  if (routineKey) keys.add(routineKey);
+  return keys;
+}
+
+function markDeletedStudentProfiles(keys) {
+  if (!state.settings || typeof state.settings !== "object") state.settings = {};
+  const existing = Array.isArray(state.settings.deletedStudentProfiles)
+    ? state.settings.deletedStudentProfiles
+    : [];
+  state.settings.deletedStudentProfiles = Array.from(new Set(existing.concat(Array.from(keys))));
+}
+
+function getDeletedStudentProfileSet(container = state) {
+  return new Set(Array.isArray(container?.settings?.deletedStudentProfiles)
+    ? container.settings.deletedStudentProfiles
+    : []);
+}
+
+function mergeDeletedStudentProfiles(remoteState, localState) {
+  const merged = { ...(remoteState || {}) };
+  const remoteSettings = isPlainObject(remoteState?.settings) ? remoteState.settings : {};
+  const localDeleted = getDeletedStudentProfileSet(localState);
+  const remoteDeleted = getDeletedStudentProfileSet(remoteState);
+  merged.settings = {
+    ...remoteSettings,
+    deletedStudentProfiles: Array.from(new Set([...remoteDeleted, ...localDeleted])),
+  };
+  return pruneDeletedStudentProfiles(merged);
+}
+
+function isDeletedStudentProfile(key, routine, container = state) {
+  const deleted = getDeletedStudentProfileSet(container);
+  if (deleted.has(key)) return true;
+  const name = getNameFromRoutineKey(key, routine);
+  const code = routine?.code || String(key).split("::")[1] || "";
+  return deleted.has(getRoutineKey(name, code));
+}
+
+function pruneDeletedStudentProfiles(container) {
+  const deleted = getDeletedStudentProfileSet(container);
+  if (!deleted.size) return container;
+  if (container.routines && typeof container.routines === "object") {
+    Object.keys(container.routines).forEach((key) => {
+      if (isDeletedStudentProfile(key, container.routines[key], container)) {
+        delete container.routines[key];
+      }
+    });
+  }
+  const shouldRemove = (item) => {
+    const id = getStudentRecordId(item);
+    const nestedId = getStudentRecordId(item?.request);
+    return deleted.has(id)
+      || deleted.has(nestedId)
+      || (id && deleted.has(getRoutineKeyFromDefaultRequestId(id)))
+      || (nestedId && deleted.has(getRoutineKeyFromDefaultRequestId(nestedId)));
+  };
+  removeStudentRecordsFromContainer(container, shouldRemove);
+  Object.keys(container.weeks || {}).forEach((weekKey) => {
+    removeStudentRecordsFromContainer(container.weeks[weekKey], shouldRemove);
+  });
+  return container;
 }
 
 function normalizeIdentityValue(value) {
@@ -3143,6 +3242,7 @@ function normalizeState(saved) {
     settings: isPlainObject(saved.settings) ? saved.settings : {},
     coachNotes: isPlainObject(saved.coachNotes) ? saved.coachNotes : {},
   };
+  pruneDeletedStudentProfiles(normalized);
   if (!normalized.weeks[normalized.currentWeekKey]) normalized.weeks[normalized.currentWeekKey] = createEmptyWeek();
   normalized.weeks[normalized.currentWeekKey] = normalizeWeek(normalized.weeks[normalized.currentWeekKey]);
   const week = normalized.weeks[normalized.currentWeekKey];
@@ -3204,7 +3304,7 @@ async function saveCloudNow() {
     await cloudStore.setDoc(cloudStore.documentRef, {
       appState: getCloudState(),
       updatedAt: cloudStore.serverTimestamp(),
-    }, { merge: true });
+    });
     setSyncStatus("云端同步中", "cloud");
     return true;
   } catch (error) {
@@ -3216,10 +3316,10 @@ async function saveCloudNow() {
 
 function getCloudState() {
   persistCurrentWeekRefs();
-  return {
+  return pruneDeletedStudentProfiles({
     weeks: state.weeks || {},
     routines: state.routines || {},
     settings: state.settings || {},
     coachNotes: state.coachNotes || {},
-  };
+  });
 }
