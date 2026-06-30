@@ -775,11 +775,14 @@ function renderAvailability() {
   trimPreferredAvailability();
   const preferredLimit = getPreferredAvailabilityLimit();
   els.availabilityGrid.innerHTML = `
-    <div class="head">时间</div>
-    ${DAYS.map((day, index) => `<div class="head">${day.label}<br><span>${formatMonthDay(getDayDate(index))}</span></div>`).join("")}
-    ${SLOTS.map((slot) => `
-      <div class="time">${slot.label}<br><span>${slot.detail}</span></div>
-      ${DAYS.map((day, dayIndex) => {
+    ${DAYS.map((day, dayIndex) => `
+      <section class="availability-day">
+        <header>
+          <strong>${day.label}</strong>
+          <span>${formatMonthDay(getDayDate(dayIndex))}</span>
+        </header>
+        <div class="availability-slots">
+          ${SLOTS.map((slot) => {
         const key = `${day.id}-${slot.id}`;
         const selected = selectedAvailability.has(key);
         const preferred = selectedPreferredAvailability.has(key);
@@ -791,6 +794,8 @@ function renderAvailability() {
           <em>${preferred ? "优先" : selected ? "可用" : "可选"}</em>
         </div>`;
       }).join("")}
+        </div>
+      </section>
     `).join("")}
     <div class="availability-helper">已标 ${selectedPreferredAvailability.size}/${preferredLimit} 个优先；先点时间选可用，再点右上角设优先。</div>
   `;

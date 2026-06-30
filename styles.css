@@ -1004,52 +1004,84 @@ textarea {
 }
 
 .availability-grid {
-  min-width: 720px;
   display: grid;
-  grid-template-columns: 92px repeat(4, minmax(140px, 1fr));
-  gap: 1px;
-  overflow: hidden;
+  gap: 10px;
   margin-bottom: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--line);
 }
 
-.availability-grid .head,
-.availability-grid .time {
-  min-height: 58px;
+.availability-day {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+.availability-day header {
   display: grid;
   align-content: center;
-  padding: 10px;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
   font-weight: 900;
 }
 
-.availability-grid .head {
-  background: var(--ink);
-  color: #fff;
+.availability-day header span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
 }
 
-.availability-grid .time {
-  background: #eef4f1;
+.availability-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .slot-toggle {
   position: relative;
-  min-height: 74px;
-  border: 0;
+  min-height: 86px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 30px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: #fffafc;
   color: var(--muted);
   font-weight: 900;
+  text-align: left;
 }
 
-.slot-toggle small,
-.slot-toggle strong,
-.slot-toggle span {
+.slot-toggle small {
   display: none;
 }
 
+.slot-toggle strong,
+.slot-toggle span,
 .slot-toggle em {
+  display: block;
+}
+
+.slot-toggle em {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #ffe5f1;
+  color: var(--pink);
+  font-size: 0.76rem;
   font-style: normal;
+  font-weight: 950;
+}
+
+.slot-toggle strong {
+  color: var(--ink);
+}
+
+.slot-toggle span {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .slot-toggle.selected {
@@ -2274,29 +2306,31 @@ textarea {
   }
 
   .availability-grid {
-    min-width: 0;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    border: 0;
-    background: transparent;
-    overflow: visible;
   }
 
-  .availability-grid .head,
-  .availability-grid .time {
-    display: none;
+  .availability-day {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .availability-day header {
+    min-height: 48px;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    align-content: center;
+    padding: 8px 10px;
+  }
+
+  .availability-slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .slot-toggle {
-    min-height: 116px;
-    display: grid;
-    align-content: center;
-    gap: 5px;
+    min-height: 104px;
     padding: 36px 12px 12px;
-    border: 1px solid var(--line);
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.9);
-    text-align: left;
   }
 
   .slot-priority-toggle {
@@ -2304,14 +2338,6 @@ textarea {
     padding: 0 10px;
   }
 
-  .slot-toggle small,
-  .slot-toggle strong,
-  .slot-toggle span,
-  .slot-toggle em {
-    display: block;
-  }
-
-  .slot-toggle small,
   .slot-toggle span {
     color: var(--muted);
     font-size: 0.78rem;
