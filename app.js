@@ -1200,6 +1200,7 @@ function renderMySchedule() {
           <article class="schedule-card">
             <strong>${formatSlot(item.slotKey)}</strong>
             <span>${item.goal} · ${item.location}</span>
+            ${renderClassmatesLine(item, name, code)}
           </article>
         `).join("")}
       </div>
@@ -1246,6 +1247,16 @@ function renderMySchedule() {
       <small>以后照常的周就不用重复提交。</small>
     </div>
   `;
+}
+
+function renderClassmatesLine(assignment, name, code) {
+  const classmates = state.published
+    .filter((item) => item.slotKey === assignment.slotKey)
+    .filter((item) => !assignmentMatchesStudent(item, name, code))
+    .map((item) => item.name)
+    .filter(Boolean);
+  if (!classmates.length) return "";
+  return `<small class="schedule-classmates">同课：${[...new Set(classmates)].map(escapeHtml).join("、")}</small>`;
 }
 
 function assignmentMatchesStudent(assignment, name, code) {

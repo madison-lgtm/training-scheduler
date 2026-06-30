@@ -1311,6 +1311,11 @@ textarea {
   background: #fbfcfb;
 }
 
+.schedule-classmates {
+  color: var(--muted);
+  font-weight: 850;
+}
+
 .plan-card span {
   width: fit-content;
   padding: 3px 7px;
