@@ -1184,7 +1184,9 @@ function renderMySchedule() {
     </div>`;
     return;
   }
-  const assignments = state.published.filter((item) => assignmentMatchesStudent(item, name, code));
+  const assignments = state.published
+    .filter((item) => assignmentMatchesStudent(item, name, code))
+    .sort((a, b) => getSlotSortIndex(a.slotKey) - getSlotSortIndex(b.slotKey));
   if (assignments.length) {
     els.mySchedule.innerHTML = `
       <div class="schedule-home-note is-confirmed"><span>已确认</span></div>
