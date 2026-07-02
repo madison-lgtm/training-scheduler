@@ -92,6 +92,7 @@ const els = {
   routineTwo: document.querySelector("#routineTwo"),
   routineGoalOne: document.querySelector("#routineGoalOne"),
   routineGoalTwo: document.querySelector("#routineGoalTwo"),
+  routineList: document.querySelector("#routineList"),
   addRoutineSlot: document.querySelector("#addRoutineSlot"),
   sessionCount: document.querySelector("#sessionCount"),
   sessionCountOptions: document.querySelector("#sessionCountOptions"),
@@ -215,6 +216,7 @@ function bindEvents() {
   on(els.studentNext, "click", () => setStudentStep(currentStudentStep + 1));
   on(els.saveDefaultRoutine, "click", saveDefaultRoutine);
   on(els.addRoutineSlot, "click", showNextRoutineRow);
+  on(els.routineList, "click", handleRoutineListClick);
   on(els.editDefaultRoutine, "click", () => {
     closeActionMenus();
     openDefaultRoutineEditor();
@@ -363,6 +365,7 @@ function fillSelects() {
 function handleSessionCountClick(event) {
   if (event.currentTarget?.tagName === "SELECT") {
     els.sessionCount.value = event.currentTarget.value;
+    updateZeroSessionSelections();
     renderSessionCountOptions();
     renderSessionGoals();
     trimPreferredAvailability();
@@ -372,6 +375,7 @@ function handleSessionCountClick(event) {
   const button = event.target.closest("[data-session-count]");
   if (!button) return;
   els.sessionCount.value = button.dataset.sessionCount;
+  updateZeroSessionSelections();
   renderSessionCountOptions();
   renderSessionGoals();
   trimPreferredAvailability();
@@ -380,11 +384,11 @@ function handleSessionCountClick(event) {
 
 function renderSessionCountOptions() {
   if (els.sessionCountOptions?.tagName === "SELECT") {
-    els.sessionCountOptions.value = String(els.sessionCount.value || 1);
+    els.sessionCountOptions.value = String(getDesiredSessionCount());
     return;
   }
   els.sessionCountOptions.querySelectorAll("[data-session-count]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.sessionCount === String(els.sessionCount.value));
+    button.classList.toggle("active", button.dataset.sessionCount === String(getDesiredSessionCount()));
   });
 }
 
@@ -544,12 +548,19 @@ function getStudentStepHelper(step) {
 
 function setStudentStep(step) {
   if (step > currentStudentStep && !canLeaveStudentStep(currentStudentStep)) return;
+  if (isZeroSessionRequest() && step > 3 && step < STUDENT_STEPS.length - 1) {
+    step = STUDENT_STEPS.length - 1;
+  }
   currentStudentStep = Math.max(0, Math.min(STUDENT_STEPS.length - 1, step));
   els.studentMessage.textContent = "";
   renderStudentSteps();
 }
 
 function handleStudentBack() {
+  if (isZeroSessionRequest() && currentStudentStep === STUDENT_STEPS.length - 1) {
+    setStudentStep(3);
+    return;
+  }
   if (currentStudentStep === 2 || currentStudentStep === 3) {
     setStudentStep(1);
     return;
@@ -585,11 +596,39 @@ function renderRoutineRows(visibleCount = 1) {
   const rows = getRoutineRows();
   const safeCount = Math.max(1, Math.min(rows.length, visibleCount));
   rows.forEach((row, index) => {
-    row.classList.toggle("is-hidden", index >= safeCount);
+    const visible = index < safeCount;
+    row.classList.toggle("is-hidden", !visible);
+    const removeButton = row.querySelector("[data-remove-routine-row]");
+    if (removeButton) removeButton.style.display = visible && safeCount > 1 ? "" : "none";
   });
   if (els.addRoutineSlot) {
     els.addRoutineSlot.style.display = safeCount >= rows.length ? "none" : "";
   }
+}
+
+function handleRoutineListClick(event) {
+  const button = event.target.closest("[data-remove-routine-row]");
+  if (!button) return;
+  const row = button.closest(".routine-item");
+  if (row) removeRoutineRow(row);
+}
+
+function removeRoutineRow(rowToRemove) {
+  const visibleRows = getRoutineRows().filter((row) => !row.classList.contains("is-hidden"));
+  if (visibleRows.length <= 1) return;
+  const values = visibleRows
+    .filter((row) => row !== rowToRemove)
+    .map((row) => ({
+      slotKey: row.querySelector(".routine-slot-select")?.value || "",
+      goal: row.querySelector(".routine-goal-select")?.value || FLEX_GOAL,
+    }));
+  getRoutineRows().forEach((row, index) => {
+    const slotSelect = row.querySelector(".routine-slot-select");
+    const goalSelect = row.querySelector(".routine-goal-select");
+    if (slotSelect) slotSelect.value = values[index]?.slotKey || "";
+    if (goalSelect) goalSelect.value = normalizeGoal(values[index]?.goal);
+  });
+  renderRoutineRows(values.length);
 }
 
 function showNextRoutineRow() {
@@ -609,6 +648,9 @@ function canLeaveStudentStep(step) {
   }
   if (step === 0 && !confirmStudentPinOwner()) {
     return false;
+  }
+  if (isZeroSessionRequest() && (step === 4 || step === 5)) {
+    return true;
   }
   if (step === 4 && !selectedAvailability.size) {
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
@@ -730,9 +772,18 @@ function applyRemoteState(remoteState) {
 }
 
 function renderSessionGoals() {
-  const count = Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
+  const count = getDesiredSessionCount();
   trimGoalSelection(count);
   renderSessionCountOptions();
+  if (count === 0) {
+    els.sessionGoals.innerHTML = `
+      <div class="goal-picker-copy">
+        <strong>本周请假</strong>
+        <span>这周不安排训练；不用选择时间、地点或训练内容。</span>
+      </div>
+    `;
+    return;
+  }
   els.sessionGoals.innerHTML = `
     <div class="goal-picker-copy">
       <strong>想练什么</strong>
@@ -752,7 +803,8 @@ function renderSessionGoals() {
 }
 
 function toggleGoal(goal) {
-  const count = Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
+  const count = getDesiredSessionCount();
+  if (count === 0) return;
   if (goal === FLEX_GOAL) {
     selectedGoals = new Set([FLEX_GOAL]);
   } else {
@@ -765,6 +817,10 @@ function toggleGoal(goal) {
 }
 
 function trimGoalSelection(count) {
+  if (count === 0) {
+    selectedGoals = new Set();
+    return;
+  }
   const goals = [...selectedGoals].map(normalizeGoal);
   if (goals.includes(FLEX_GOAL)) {
     selectedGoals = new Set([FLEX_GOAL]);
@@ -851,7 +907,23 @@ function togglePreferredAvailability(key) {
 }
 
 function getPreferredAvailabilityLimit() {
-  return Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
+  return Math.max(1, getDesiredSessionCount());
+}
+
+function getDesiredSessionCount() {
+  const value = els.sessionCount.value === "" ? 1 : Number(els.sessionCount.value);
+  return Math.max(0, Math.min(6, Number.isFinite(value) ? value : 1));
+}
+
+function isZeroSessionRequest() {
+  return getDesiredSessionCount() === 0;
+}
+
+function updateZeroSessionSelections() {
+  if (!isZeroSessionRequest()) return;
+  selectedAvailability = new Set();
+  selectedPreferredAvailability = new Set();
+  selectedGoals = new Set();
 }
 
 function trimPreferredAvailability() {
@@ -879,21 +951,24 @@ function submitStudentRequest() {
     return;
   }
   name = els.studentName.value.trim();
-  if (!selectedAvailability.size) {
+  const desiredCount = getDesiredSessionCount();
+  const isLeaveRequest = desiredCount === 0;
+  if (!isLeaveRequest && !selectedAvailability.size) {
     setStudentStep(4);
     els.studentMessage.textContent = "至少点选一个你有空的时间。";
     return;
   }
 
-  const locations = [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value);
-  if (!locations.length) {
+  const selectedLocations = [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value);
+  if (!isLeaveRequest && !selectedLocations.length) {
     setStudentStep(5);
     els.studentMessage.textContent = "至少选择一个地点偏好。";
     return;
   }
 
-  const desiredCount = Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
-  const preferredAvailability = [...selectedPreferredAvailability]
+  const availability = isLeaveRequest ? [] : [...selectedAvailability];
+  const locations = isLeaveRequest ? [] : selectedLocations;
+  const preferredAvailability = (isLeaveRequest ? [] : [...selectedPreferredAvailability])
     .filter((slotKey) => selectedAvailability.has(slotKey))
     .slice(0, desiredCount);
 
@@ -902,10 +977,10 @@ function submitStudentRequest() {
     name,
     code,
     desiredCount,
-    goals: buildGoalsForCount(desiredCount),
-    goalPreferences: [...selectedGoals],
+    goals: isLeaveRequest ? [] : buildGoalsForCount(desiredCount),
+    goalPreferences: isLeaveRequest ? [] : [...selectedGoals],
     locations,
-    availability: [...selectedAvailability],
+    availability,
     preferredAvailability,
     notes: els.studentNotes.value.trim(),
     routine: [],
@@ -1087,6 +1162,7 @@ function applyRoutineToWeeklyForm(routine) {
 }
 
 function buildGoalsForCount(count) {
+  if (count <= 0) return [];
   const preferences = [...selectedGoals].map(normalizeGoal).filter(Boolean);
   const base = preferences.length ? preferences : [FLEX_GOAL];
   if (base.includes(FLEX_GOAL)) return Array.from({ length: count }, () => FLEX_GOAL);
@@ -1102,15 +1178,20 @@ function renderRequestPreview() {
   const request = lastSubmittedRequest || buildDraftRequestPreview();
   const submitted = Boolean(lastSubmittedRequest);
   const weekLabel = getWeekRangeLabel();
-  const timeLine = request.availability.length ? request.availability.map(formatSlot).map(escapeHtml).join(" / ") : "还没选择";
-  const preferredLine = request.preferredAvailability?.length ? request.preferredAvailability.map(formatSlot).map(escapeHtml).join(" / ") : "未特别标记";
-  const goalLine = request.goals.length ? request.goals.map((goal) => escapeHtml(normalizeGoal(goal))).join(" / ") : "听 Dora 安排";
-  const locationLine = request.locations.length ? request.locations.map(escapeHtml).join(" / ") : "还没选择";
+  const isLeaveRequest = Number(request.desiredCount) === 0;
+  const timeLine = isLeaveRequest ? "本周不安排训练" : request.availability.length ? request.availability.map(formatSlot).map(escapeHtml).join(" / ") : "还没选择";
+  const preferredLine = isLeaveRequest ? "不需要" : request.preferredAvailability?.length ? request.preferredAvailability.map(formatSlot).map(escapeHtml).join(" / ") : "未特别标记";
+  const goalLine = isLeaveRequest ? "本周请假" : request.goals.length ? request.goals.map((goal) => escapeHtml(normalizeGoal(goal))).join(" / ") : "听 Dora 安排";
+  const locationLine = isLeaveRequest ? "不需要" : request.locations.length ? request.locations.map(escapeHtml).join(" / ") : "还没选择";
+  const requestTitle = isLeaveRequest
+    ? `${escapeHtml(request.name || "还没填名字")} · 本周请假`
+    : `${escapeHtml(request.name || "还没填名字")} · 想上 ${request.desiredCount} 节`;
   els.requestPreview.innerHTML = `
     <div class="submission-summary ${submitted ? "submitted compact-submission" : ""}">
       ${submitted ? `<div class="success-mark">✓</div>` : ""}
       ${submitted ? `
         <h3>申请已提交</h3>
+        ${isLeaveRequest ? `<p class="success-copy">这周已提交「本周请假 / 不上课」，Dora 会看到本周不需要排课。</p>` : ""}
         <div class="submission-lines">
           <p><b>时间</b><span>${timeLine}</span></p>
           <p><b>优先</b><span>${preferredLine}</span></p>
@@ -1120,8 +1201,9 @@ function renderRequestPreview() {
         <p class="success-copy">状态：等待 Dora 确认。确认后会显示在「我的训练」。</p>
       ` : `
         <span>提交前确认</span>
-        <strong>${escapeHtml(request.name || "还没填名字")} · 想上 ${request.desiredCount} 节</strong>
+        <strong>${requestTitle}</strong>
         <p class="success-copy">确认你正在提交 ${weekLabel} 的申请。</p>
+        ${isLeaveRequest ? `<p>这周申请不上课；不用选择时间、地点或训练内容。</p>` : ""}
         <p>时间：${timeLine}</p>
         <p>优先：${preferredLine}</p>
         <p>内容：${goalLine}</p>
@@ -1147,7 +1229,7 @@ function renderRequestPreview() {
   on(els.requestPreview.querySelector("[data-edit-submission]"), "click", () => {
     lastSubmittedRequest = null;
     weeklyEditMode = true;
-    setStudentStep(4);
+    setStudentStep(isZeroSessionRequest() ? 3 : 4);
   });
 }
 
@@ -1165,15 +1247,16 @@ function focusStudentSubmission() {
 }
 
 function buildDraftRequestPreview() {
-  const desiredCount = Math.max(1, Math.min(6, Number(els.sessionCount.value || 1)));
+  const desiredCount = getDesiredSessionCount();
+  const isLeaveRequest = desiredCount === 0;
   return {
     name: els.studentName.value.trim(),
     code: normalizeStudentPin(els.studentCode.value),
     desiredCount,
-    goals: buildGoalsForCount(desiredCount),
-    locations: [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value),
-    availability: [...selectedAvailability],
-    preferredAvailability: [...selectedPreferredAvailability].filter((slotKey) => selectedAvailability.has(slotKey)).slice(0, desiredCount),
+    goals: isLeaveRequest ? [] : buildGoalsForCount(desiredCount),
+    locations: isLeaveRequest ? [] : [...document.querySelectorAll('input[name="location"]:checked')].map((input) => input.value),
+    availability: isLeaveRequest ? [] : [...selectedAvailability],
+    preferredAvailability: isLeaveRequest ? [] : [...selectedPreferredAvailability].filter((slotKey) => selectedAvailability.has(slotKey)).slice(0, desiredCount),
   };
 }
 
@@ -1212,6 +1295,17 @@ function renderMySchedule() {
   }
   const request = findCurrentStudentRequest(code);
   if (request) {
+    if (Number(request.desiredCount) === 0) {
+      els.mySchedule.innerHTML = `
+        <div class="schedule-home-note is-routine"><span>特殊申请已提交</span></div>
+        <div class="schedule-home-state">
+          <span>本周请假</span>
+          <strong>这周不安排训练</strong>
+          <small>如果临时想恢复上课，可以重新提交一次特殊申请，旧申请会自动替换。</small>
+        </div>
+      `;
+      return;
+    }
     els.mySchedule.innerHTML = `
       <div class="schedule-home-note is-routine"><span>特殊申请已提交</span></div>
       <div class="schedule-home-items">
@@ -1478,10 +1572,11 @@ function countLocationVotes(dayId, requests) {
 
 function expandSessions(requests) {
   return requests.flatMap((request) => {
-    return Array.from({ length: request.desiredCount }, (_, index) => ({
+    const desiredCount = Math.max(0, Math.min(6, Number(request.desiredCount || 0)));
+    return Array.from({ length: desiredCount }, (_, index) => ({
       request,
       index,
-      goal: normalizeGoal(request.goals[index] || request.goals[0]),
+      goal: normalizeGoal(request.goals?.[index] || request.goals?.[0]),
     }));
   });
 }
@@ -2313,6 +2408,9 @@ function getRequestFirstSlotSortIndex(request) {
 }
 
 function getPreferenceItems(request) {
+  if (Number(request.desiredCount) === 0) {
+    return [{ time: "本周请假", goal: "0 次 / 不排课", location: "不需要", preferred: false }];
+  }
   const routine = Array.isArray(request.routine) ? request.routine.filter((item) => item.slotKey) : [];
   const location = request.locations.length ? request.locations.join(" / ") : "未设置";
   const items = routine.length
@@ -2721,7 +2819,7 @@ function normalizeDraftUnassigned() {
     if (isManualDraftItem(item)) continue;
     const request = item.request || findEffectiveRequestById(item.requestId);
     const key = getRequestCountKey(item);
-    const desired = Math.max(1, Number(request?.desiredCount || item.request?.desiredCount || 1));
+    const desired = Math.max(0, Number(request?.desiredCount ?? item.request?.desiredCount ?? 1));
     const assigned = assignedCounts.get(key) || 0;
     const pending = pendingCounts.get(key) || 0;
     if (assigned + pending >= desired) continue;

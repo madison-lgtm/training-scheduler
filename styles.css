@@ -841,12 +841,23 @@ h3 {
 
 .routine-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
   gap: 10px;
 }
 
 .routine-item.is-hidden {
   display: none;
+}
+
+.routine-remove {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(195, 58, 134, 0.22);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 950;
 }
 
 .add-routine {
@@ -2440,6 +2451,15 @@ textarea {
   .default-panel,
   .submission-summary {
     padding: 12px;
+  }
+
+  .routine-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .routine-remove {
+    grid-column: 1 / -1;
+    justify-self: end;
   }
 
   .submission-summary.submitted {
