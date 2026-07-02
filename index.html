@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Dora Training" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Dora Training</title>
-    <link rel="stylesheet" href="./styles.css?v=student-entry-20260701" />
+    <link rel="stylesheet" href="./styles.css?v=student-entry-copy-20260701" />
   </head>
   <body data-view="role">
     <main class="app">
@@ -79,13 +79,13 @@
           <section class="student-step active" data-step="0">
             <div class="form-grid identity-form">
               <label class="field">
-                <span>名字或昵称</span>
+                <span>姓名</span>
                 <input id="studentName" placeholder="比如：苏" />
               </label>
               <label class="field">
                 <span>电话号码后四位</span>
-                <input id="studentCode" inputmode="numeric" maxlength="4" pattern="\d{4}" placeholder="可用手机号后四位" />
-                <small>用于找回你的安排；名字输错或换昵称也没关系。</small>
+                <input id="studentCode" inputmode="numeric" maxlength="4" pattern="\d{4}" placeholder="例如：1234" />
+                <small>用于定位你的账号；只要后四位一致，换名字也能找回安排。</small>
               </label>
             </div>
           </section>
@@ -482,6 +482,6 @@
         });
       })();
     </script>
-    <script src="./app.js?v=student-entry-20260701"></script>
+    <script src="./app.js?v=student-entry-copy-20260701"></script>
   </body>
 </html>

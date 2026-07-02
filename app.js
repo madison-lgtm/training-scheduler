@@ -539,7 +539,7 @@ function getStudentStepHelper(step) {
   if (step === 4) return "多点几个可选时间；优先时间最多和上课次数一样多。";
   if (step === 5) return "地点是偏好，不是最终确认地点。";
   if (step === 6) return "确认无误后提交给 Dora。";
-  return "先输入名字和电话号码后四位。";
+  return "先输入姓名和电话号码后四位。";
 }
 
 function setStudentStep(step) {
@@ -559,7 +559,7 @@ function handleStudentBack() {
 
 function startWeeklyEdit() {
   if (!els.studentName.value.trim()) {
-    els.studentMessage.textContent = "先填名字或昵称。";
+    els.studentMessage.textContent = "先填姓名。";
     return;
   }
   weeklyEditMode = true;
@@ -569,7 +569,7 @@ function startWeeklyEdit() {
 
 function openDefaultRoutineEditor() {
   if (!els.studentName.value.trim()) {
-    els.studentMessage.textContent = "先填名字或昵称。";
+    els.studentMessage.textContent = "先填姓名。";
     return;
   }
   loadRoutineForName();
@@ -600,11 +600,11 @@ function showNextRoutineRow() {
 
 function canLeaveStudentStep(step) {
   if (step === 0 && !els.studentName.value.trim()) {
-    els.studentMessage.textContent = "先填名字或昵称。";
+    els.studentMessage.textContent = "先填姓名。";
     return false;
   }
   if (step === 0 && !isValidStudentPin(els.studentCode.value)) {
-    els.studentMessage.textContent = "请填写电话号码后四位。以后就算名字改了，也能找回你的安排。";
+    els.studentMessage.textContent = "请填写电话号码后四位。以后换名字也能找回你的安排。";
     return false;
   }
   if (step === 0 && !confirmStudentPinOwner()) {
@@ -866,7 +866,7 @@ function submitStudentRequest() {
   const code = normalizeStudentPin(els.studentCode.value);
   if (!name) {
     setStudentStep(0);
-    els.studentMessage.textContent = "先填名字或昵称。";
+    els.studentMessage.textContent = "先填姓名。";
     return;
   }
   if (!isValidStudentPin(code)) {
@@ -974,7 +974,7 @@ function renderDefaultSummary() {
     els.defaultPanel.classList.remove("first-time", "ready");
     els.defaultSummary.innerHTML = "";
     els.weeklyQuickActions.style.display = "none";
-    els.editDefaultRoutine.textContent = "设置常用安排";
+    els.editDefaultRoutine.textContent = "修改常用安排";
     els.customizeWeek.textContent = "特殊情况调整";
     return;
   }
@@ -986,7 +986,7 @@ function renderDefaultSummary() {
     els.routineSetupTitle.textContent = "常用安排";
     if (els.routineSetupCopy) els.routineSetupCopy.textContent = "选平常最常上的时间、训练内容和地点。保存后会长期有效。";
     els.weeklyQuickActions.style.display = "";
-    els.editDefaultRoutine.textContent = "设置常用安排";
+    els.editDefaultRoutine.textContent = "修改常用安排";
     els.customizeWeek.textContent = "特殊情况调整";
     return;
   }
@@ -1004,7 +1004,7 @@ function saveDefaultRoutine() {
   let name = els.studentName.value.trim();
   const code = normalizeStudentPin(els.studentCode.value);
   if (!name) {
-    els.studentMessage.textContent = "先填名字或昵称。";
+    els.studentMessage.textContent = "先填姓名。";
     return;
   }
   if (!isValidStudentPin(code)) {
@@ -1186,9 +1186,9 @@ function renderMySchedule() {
   const code = normalizeStudentPin(els.studentCode.value);
   if (!name || !code) {
     els.mySchedule.innerHTML = `<div class="schedule-home-state is-empty">
-      <span>先输入名字和电话号码后四位</span>
+      <span>先输入姓名和电话号码后四位</span>
       <strong>这里会显示你的训练安排</strong>
-      <small>名字输错或换昵称也没关系，电话号码后四位会帮你找回安排。</small>
+      <small>只要电话号码后四位一致，换名字也能找回安排。</small>
     </div>`;
     return;
   }
