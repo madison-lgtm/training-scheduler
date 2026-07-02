@@ -349,6 +349,7 @@ function saveCoachPin() {
 }
 
 function fillSelects() {
+  ensureZeroSessionOption();
   const slotOptions = [`<option value="">不设置</option>`].concat(
     allSlotKeys().map((slotKey) => `<option value="${slotKey}">${formatSlotLabel(slotKey)}</option>`),
   ).join("");
@@ -360,6 +361,14 @@ function fillSelects() {
     select.innerHTML = goalOptions;
   });
   renderRoutineRows(1);
+}
+
+function ensureZeroSessionOption() {
+  if (!els.sessionCountOptions || els.sessionCountOptions.querySelector('option[value="0"]')) return;
+  const option = document.createElement("option");
+  option.value = "0";
+  option.textContent = "0 次（本周请假）";
+  els.sessionCountOptions.prepend(option);
 }
 
 function handleSessionCountClick(event) {
