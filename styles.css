@@ -702,6 +702,11 @@ h3 {
   line-height: 1.45;
 }
 
+.schedule-home-action {
+  width: fit-content;
+  margin-top: 4px;
+}
+
 .schedule-home-state.is-confirmed {
   border-color: rgba(20, 120, 88, 0.22);
   background: linear-gradient(135deg, #f5fff9, #fff);

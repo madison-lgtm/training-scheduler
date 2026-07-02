@@ -234,6 +234,9 @@ function bindEvents() {
     renderDefaultSummary();
     renderMySchedule();
   });
+  on(els.mySchedule, "click", (event) => {
+    if (event.target.closest("[data-open-default-routine]")) openDefaultRoutineEditor();
+  });
   if (els.studentSummary) {
     els.studentSummary.addEventListener("click", handleStudentSummaryClick, true);
   }
@@ -536,7 +539,7 @@ function getStudentStepHelper(step) {
   if (step === 4) return "多点几个可选时间；优先时间最多和上课次数一样多。";
   if (step === 5) return "地点是偏好，不是最终确认地点。";
   if (step === 6) return "确认无误后提交给 Dora。";
-  return "先输入名字和识别码。";
+  return "先输入名字和电话号码后四位。";
 }
 
 function setStudentStep(step) {
@@ -601,7 +604,7 @@ function canLeaveStudentStep(step) {
     return false;
   }
   if (step === 0 && !isValidStudentPin(els.studentCode.value)) {
-    els.studentMessage.textContent = "请填写 4 位数字 PIN。以后就算名字改了，也能用 PIN 找到你的安排。";
+    els.studentMessage.textContent = "请填写电话号码后四位。以后就算名字改了，也能找回你的安排。";
     return false;
   }
   if (step === 0 && !confirmStudentPinOwner()) {
@@ -868,7 +871,7 @@ function submitStudentRequest() {
   }
   if (!isValidStudentPin(code)) {
     setStudentStep(0);
-    els.studentMessage.textContent = "请填写 4 位数字 PIN。Dora 会用它确认这是你的申请。";
+    els.studentMessage.textContent = "请填写电话号码后四位。Dora 会用它确认这是你的申请。";
     return;
   }
   if (!confirmStudentPinOwner(name, code)) {
@@ -1006,7 +1009,7 @@ function saveDefaultRoutine() {
   }
   if (!isValidStudentPin(code)) {
     setStudentStep(0);
-    els.studentMessage.textContent = "请填写 4 位数字 PIN。Dora 会用它确认这是你的常用安排。";
+    els.studentMessage.textContent = "请填写电话号码后四位。Dora 会用它确认这是你的常用安排。";
     return;
   }
   if (!confirmStudentPinOwner(name, code)) {
@@ -1183,9 +1186,9 @@ function renderMySchedule() {
   const code = normalizeStudentPin(els.studentCode.value);
   if (!name || !code) {
     els.mySchedule.innerHTML = `<div class="schedule-home-state is-empty">
-      <span>先输入名字和 PIN</span>
+      <span>先输入名字和电话号码后四位</span>
       <strong>这里会显示你的训练安排</strong>
-      <small>PIN 是你的识别码，名字改了也能找回自己的安排。</small>
+      <small>名字输错或换昵称也没关系，电话号码后四位会帮你找回安排。</small>
     </div>`;
     return;
   }
@@ -1245,6 +1248,7 @@ function renderMySchedule() {
       <span>还没有常用安排</span>
       <strong>先设置一次常用安排</strong>
       <small>以后照常的周就不用重复提交。</small>
+      <button class="primary schedule-home-action" type="button" data-open-default-routine>设置常用安排</button>
     </div>
   `;
 }
@@ -2213,16 +2217,16 @@ function confirmStudentPinOwner(name = els.studentName.value.trim(), code = els.
   const targetName = normalizeIdentityValue(name);
   const owner = findStudentByPin(code);
   if (!owner || normalizeIdentityValue(owner.name) === targetName) return true;
-  const confirmed = window.confirm(`这个 PIN 已经属于 ${owner.name}。你是 ${owner.name} 吗？`);
+  const confirmed = window.confirm(`这个电话号码后四位已经属于 ${owner.name}。你是 ${owner.name} 吗？`);
   if (confirmed) {
     els.studentName.value = owner.name;
-    els.studentMessage.textContent = `已用 PIN 找到 ${owner.name} 的资料。`;
+    els.studentMessage.textContent = `已用电话号码后四位找到 ${owner.name} 的资料。`;
     loadRoutineForName();
     renderDefaultSummary();
     renderMySchedule();
     return true;
   }
-  els.studentMessage.textContent = "这个 PIN 已经有人在使用。请确认自己的 PIN，或换一个新的 4 位 PIN。";
+  els.studentMessage.textContent = "这个电话号码后四位已经有人在使用。请确认填写正确，或换一个 4 位数字。";
   return false;
 }
 
