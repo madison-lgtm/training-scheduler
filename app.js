@@ -93,6 +93,7 @@ const els = {
   routineGoalOne: document.querySelector("#routineGoalOne"),
   routineGoalTwo: document.querySelector("#routineGoalTwo"),
   routineList: document.querySelector("#routineList"),
+  routineEmptyState: document.querySelector("#routineEmptyState"),
   addRoutineSlot: document.querySelector("#addRoutineSlot"),
   sessionCount: document.querySelector("#sessionCount"),
   sessionCountOptions: document.querySelector("#sessionCountOptions"),
@@ -163,6 +164,10 @@ const els = {
   manualCourseMessage: document.querySelector("#manualCourseMessage"),
   cancelManualCourse: document.querySelector("#cancelManualCourse"),
   saveManualCourse: document.querySelector("#saveManualCourse"),
+  identityConfirmModal: document.querySelector("#identityConfirmModal"),
+  identityConfirmCopy: document.querySelector("#identityConfirmCopy"),
+  cancelIdentityConfirm: document.querySelector("#cancelIdentityConfirm"),
+  acceptIdentityConfirm: document.querySelector("#acceptIdentityConfirm"),
 };
 
 bootApp();
@@ -555,8 +560,8 @@ function getStudentStepHelper(step) {
   return "先输入姓名和电话号码后四位。";
 }
 
-function setStudentStep(step) {
-  if (step > currentStudentStep && !canLeaveStudentStep(currentStudentStep)) return;
+async function setStudentStep(step) {
+  if (step > currentStudentStep && !(await canLeaveStudentStep(currentStudentStep))) return;
   if (isZeroSessionRequest() && step > 3 && step < STUDENT_STEPS.length - 1) {
     step = STUDENT_STEPS.length - 1;
   }
@@ -603,13 +608,14 @@ function getRoutineRows() {
 
 function renderRoutineRows(visibleCount = 1) {
   const rows = getRoutineRows();
-  const safeCount = Math.max(1, Math.min(rows.length, visibleCount));
+  const safeCount = Math.max(0, Math.min(rows.length, visibleCount));
   rows.forEach((row, index) => {
     const visible = index < safeCount;
     row.classList.toggle("is-hidden", !visible);
     const removeButton = row.querySelector("[data-remove-routine-row]");
-    if (removeButton) removeButton.style.display = visible && safeCount > 1 ? "" : "none";
+    if (removeButton) removeButton.style.display = visible ? "" : "none";
   });
+  if (els.routineEmptyState) els.routineEmptyState.classList.toggle("is-hidden", safeCount > 0);
   if (els.addRoutineSlot) {
     els.addRoutineSlot.style.display = safeCount >= rows.length ? "none" : "";
   }
@@ -624,7 +630,6 @@ function handleRoutineListClick(event) {
 
 function removeRoutineRow(rowToRemove) {
   const visibleRows = getRoutineRows().filter((row) => !row.classList.contains("is-hidden"));
-  if (visibleRows.length <= 1) return;
   const values = visibleRows
     .filter((row) => row !== rowToRemove)
     .map((row) => ({
@@ -646,7 +651,7 @@ function showNextRoutineRow() {
   renderRoutineRows(visibleCount + 1);
 }
 
-function canLeaveStudentStep(step) {
+async function canLeaveStudentStep(step) {
   if (step === 0 && !els.studentName.value.trim()) {
     els.studentMessage.textContent = "先填姓名。";
     return false;
@@ -655,7 +660,7 @@ function canLeaveStudentStep(step) {
     els.studentMessage.textContent = "请填写电话号码后四位。以后换名字也能找回你的安排。";
     return false;
   }
-  if (step === 0 && !confirmStudentPinOwner()) {
+  if (step === 0 && !(await confirmStudentPinOwner())) {
     return false;
   }
   if (isZeroSessionRequest() && (step === 4 || step === 5)) {
@@ -942,7 +947,7 @@ function trimPreferredAvailability() {
     .slice(0, preferredLimit));
 }
 
-function submitStudentRequest() {
+async function submitStudentRequest() {
   let name = els.studentName.value.trim();
   const code = normalizeStudentPin(els.studentCode.value);
   if (!name) {
@@ -955,7 +960,7 @@ function submitStudentRequest() {
     els.studentMessage.textContent = "请填写电话号码后四位。Dora 会用它确认这是你的申请。";
     return;
   }
-  if (!confirmStudentPinOwner(name, code)) {
+  if (!(await confirmStudentPinOwner(name, code))) {
     setStudentStep(0);
     return;
   }
@@ -1084,7 +1089,7 @@ function renderDefaultSummary() {
   els.customizeWeek.textContent = "特殊情况调整";
 }
 
-function saveDefaultRoutine() {
+async function saveDefaultRoutine() {
   let name = els.studentName.value.trim();
   const code = normalizeStudentPin(els.studentCode.value);
   if (!name) {
@@ -1096,7 +1101,7 @@ function saveDefaultRoutine() {
     els.studentMessage.textContent = "请填写电话号码后四位。Dora 会用它确认这是你的常用安排。";
     return;
   }
-  if (!confirmStudentPinOwner(name, code)) {
+  if (!(await confirmStudentPinOwner(name, code))) {
     return;
   }
   name = els.studentName.value.trim();
@@ -1108,11 +1113,7 @@ function saveDefaultRoutine() {
     }))
     .filter((item) => item.slotKey);
   const locations = getRoutineLocations();
-  if (!routine.length) {
-    els.studentMessage.textContent = "至少选择一个常用时间。";
-    return;
-  }
-  if (!locations.length) {
+  if (routine.length && !locations.length) {
     els.studentMessage.textContent = "至少选择一个地点偏好。";
     return;
   }
@@ -1145,7 +1146,7 @@ function loadRoutineForName() {
     return;
   }
   const routineItems = Array.isArray(routine.routine) ? routine.routine : [];
-  renderRoutineRows(routineItems.length || 1);
+  renderRoutineRows(routineItems.length);
   getRoutineRows().forEach((row, index) => {
     const item = routineItems[index];
     const slotSelect = row.querySelector(".routine-slot-select");
@@ -2317,11 +2318,11 @@ function findStudentByPin(code) {
   return null;
 }
 
-function confirmStudentPinOwner(name = els.studentName.value.trim(), code = els.studentCode.value.trim()) {
+async function confirmStudentPinOwner(name = els.studentName.value.trim(), code = els.studentCode.value.trim()) {
   const targetName = normalizeIdentityValue(name);
   const owner = findStudentByPin(code);
   if (!owner || normalizeIdentityValue(owner.name) === targetName) return true;
-  const confirmed = window.confirm(`这个电话号码后四位已经属于 ${owner.name}。你是 ${owner.name} 吗？`);
+  const confirmed = await showIdentityConfirm(owner.name);
   if (confirmed) {
     els.studentName.value = owner.name;
     els.studentMessage.textContent = `已用电话号码后四位找到 ${owner.name} 的资料。`;
@@ -2332,6 +2333,39 @@ function confirmStudentPinOwner(name = els.studentName.value.trim(), code = els.
   }
   els.studentMessage.textContent = "这个电话号码后四位已经有人在使用。请确认填写正确，或换一个 4 位数字。";
   return false;
+}
+
+function showIdentityConfirm(ownerName) {
+  if (!els.identityConfirmModal) {
+    return Promise.resolve(window.confirm(`这个电话号码后四位已经属于 ${ownerName}。你是 ${ownerName} 吗？`));
+  }
+  if (els.identityConfirmCopy) {
+    els.identityConfirmCopy.textContent = `这个电话号码后四位已经属于 ${ownerName}。你是 ${ownerName} 吗？`;
+  }
+  els.identityConfirmModal.hidden = false;
+  els.acceptIdentityConfirm?.focus();
+  return new Promise((resolve) => {
+    const finish = (result) => {
+      els.identityConfirmModal.hidden = true;
+      els.cancelIdentityConfirm?.removeEventListener("click", cancel);
+      els.acceptIdentityConfirm?.removeEventListener("click", accept);
+      els.identityConfirmModal?.removeEventListener("click", backdrop);
+      document.removeEventListener("keydown", keydown);
+      resolve(result);
+    };
+    const cancel = () => finish(false);
+    const accept = () => finish(true);
+    const backdrop = (event) => {
+      if (event.target === els.identityConfirmModal) finish(false);
+    };
+    const keydown = (event) => {
+      if (event.key === "Escape") finish(false);
+    };
+    els.cancelIdentityConfirm?.addEventListener("click", cancel);
+    els.acceptIdentityConfirm?.addEventListener("click", accept);
+    els.identityConfirmModal?.addEventListener("click", backdrop);
+    document.addEventListener("keydown", keydown);
+  });
 }
 
 function getStudentRequestIdentityKey(request) {

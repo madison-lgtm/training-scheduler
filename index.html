@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Dora Training" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Dora Training</title>
-    <link rel="stylesheet" href="./styles.css?v=zero-session-20260702" />
+    <link rel="stylesheet" href="./styles.css?v=routine-empty-confirm-20260702" />
   </head>
   <body data-view="role">
     <main class="app">
@@ -157,6 +157,7 @@
                     </label>
                     <button class="routine-remove" type="button" data-remove-routine-row aria-label="移除这条常用安排">移除</button>
                   </div>
+                  <div class="routine-empty is-hidden" id="routineEmptyState">暂无常用安排</div>
                 </div>
                 <button class="ghost add-routine" id="addRoutineSlot" type="button">＋ 添加常用时间</button>
               </div>
@@ -441,6 +442,21 @@
           </div>
         </section>
       </div>
+      <div class="modal-backdrop" id="identityConfirmModal" hidden>
+        <section class="modal-card identity-confirm-card" role="dialog" aria-modal="true" aria-labelledby="identityConfirmTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Member Space</p>
+              <h2 id="identityConfirmTitle">确认身份</h2>
+            </div>
+          </div>
+          <p id="identityConfirmCopy">这个电话号码后四位已经有资料。</p>
+          <div class="submit-row">
+            <button class="ghost" id="cancelIdentityConfirm" type="button">取消</button>
+            <button class="primary" id="acceptIdentityConfirm" type="button">确定</button>
+          </div>
+        </section>
+      </div>
     </main>
 
     <script src="./firebase-config.js"></script>
@@ -487,6 +503,6 @@
         });
       })();
     </script>
-    <script src="./app.js?v=zero-session-20260702"></script>
+    <script src="./app.js?v=routine-empty-confirm-20260702"></script>
   </body>
 </html>

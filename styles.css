@@ -850,6 +850,20 @@ h3 {
   display: none;
 }
 
+.routine-empty {
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-weight: 900;
+  text-align: center;
+}
+
+.routine-empty.is-hidden {
+  display: none;
+}
+
 .routine-remove {
   min-height: 42px;
   padding: 0 12px;
@@ -1299,6 +1313,18 @@ textarea {
 
 .manual-course-card .submit-row {
   justify-content: flex-end;
+}
+
+.identity-confirm-card {
+  max-width: 440px;
+}
+
+.identity-confirm-card .submit-row {
+  justify-content: flex-end;
+}
+
+.identity-confirm-card .submit-row button {
+  min-width: 112px;
 }
 
 .my-schedule-list {
@@ -2460,6 +2486,16 @@ textarea {
   .routine-remove {
     grid-column: 1 / -1;
     justify-self: end;
+  }
+
+  .identity-confirm-card .submit-row {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .identity-confirm-card .submit-row button {
+    flex: 1;
+    min-width: 0;
   }
 
   .submission-summary.submitted {
