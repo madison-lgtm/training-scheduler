@@ -1506,7 +1506,7 @@ function syncRequestIntoDraft(request) {
 
   const suggestions = suggestDayLocations(getEffectiveRequests());
   Object.keys(suggestions).forEach((dayId) => {
-    if (!state.draft.dayLocations[dayId]) state.draft.dayLocations[dayId] = suggestions[dayId];
+    if (!hasDraftDayLocation(dayId)) state.draft.dayLocations[dayId] = suggestions[dayId];
   });
 
   const sessions = expandSessions([request]);
@@ -1536,7 +1536,7 @@ function reconcileDraftWithEffectiveRequests() {
   let changed = false;
   const suggestions = suggestDayLocations(requests);
   Object.keys(suggestions).forEach((dayId) => {
-    if (!state.draft.dayLocations[dayId]) {
+    if (!hasDraftDayLocation(dayId)) {
       state.draft.dayLocations[dayId] = suggestions[dayId];
       changed = true;
     }
@@ -1606,11 +1606,15 @@ function chooseDayLocation(votes) {
   return "";
 }
 
+function hasDraftDayLocation(dayId) {
+  return Object.prototype.hasOwnProperty.call(state.draft.dayLocations || {}, dayId);
+}
+
 function ensureDraftDayLocations() {
   const suggestions = suggestDayLocations(getEffectiveRequests());
   let changed = false;
   for (const day of DAYS) {
-    if (!state.draft.dayLocations[day.id]) {
+    if (!hasDraftDayLocation(day.id)) {
       state.draft.dayLocations[day.id] = suggestions[day.id];
       changed = true;
     }
