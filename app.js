@@ -731,7 +731,7 @@ async function initCloudStore() {
       setSyncStatus(`云端连接中断：${formatCloudError(error)}`, "error");
     });
 
-    setSyncStatus("云端同步中", "cloud");
+    setSyncStatus("云端已同步", "cloud");
   } catch (error) {
     cloudStore = null;
     setSyncStatus(`云端未连接：${formatCloudError(error)}`, "error");
@@ -748,6 +748,7 @@ function isCloudConfigured(config) {
 
 function setSyncStatus(text, mode) {
   if (!els.syncStatus) return;
+  if (els.syncStatus.textContent === text && els.syncStatus.classList.contains(mode)) return;
   els.syncStatus.textContent = text;
   els.syncStatus.title = text;
   els.syncStatus.className = `sync-status ${mode}`;
@@ -782,7 +783,7 @@ function applyRemoteState(remoteState) {
   renderDefaultSummary();
   renderMySchedule();
   if (els.coachView.classList.contains("active")) renderCoach();
-  setSyncStatus("云端同步中", "cloud");
+  setSyncStatus("云端已同步", "cloud");
 }
 
 function renderSessionGoals() {
@@ -3743,7 +3744,7 @@ async function saveCloudNow() {
       appState: getCloudState(),
       updatedAt: cloudStore.serverTimestamp(),
     });
-    setSyncStatus("云端同步中", "cloud");
+    setSyncStatus("云端已同步", "cloud");
     return true;
   } catch (error) {
     setSyncStatus(`保存失败：${formatCloudError(error)}`, "error");
