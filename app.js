@@ -1528,6 +1528,53 @@ function syncRequestIntoDraft(request) {
   state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
 }
 
+function reconcileDraftWithEffectiveRequests() {
+  if (state.published.length) return false;
+  const requests = getEffectiveRequests();
+  if (!requests.length) return false;
+  let changed = false;
+  const suggestions = suggestDayLocations(requests);
+  Object.keys(suggestions).forEach((dayId) => {
+    if (!state.draft.dayLocations[dayId]) {
+      state.draft.dayLocations[dayId] = suggestions[dayId];
+      changed = true;
+    }
+  });
+  for (const request of requests) {
+    const desiredCount = Math.max(0, Math.min(6, Number(request.desiredCount || 0)));
+    const currentCount = getDraftSessionCountForRequest(request);
+    if (currentCount >= desiredCount) continue;
+    const missingSessions = expandSessions([request]).slice(currentCount);
+    for (const session of missingSessions) {
+      const choice = chooseBestSlot(session, state.draft.assignments, state.draft.dayLocations);
+      if (choice) {
+        state.draft.assignments.push({
+          id: makeId(),
+          requestId: session.request.id,
+          name: session.request.name,
+          code: session.request.code || "",
+          goal: session.goal,
+          slotKey: choice,
+          location: formatLocation(state.draft.dayLocations[getDayId(choice)]),
+        });
+      } else {
+        state.draft.unassigned.push({ ...session, id: makeId() });
+      }
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function getDraftSessionCountForRequest(request) {
+  const requestId = request?.id || "";
+  if (!requestId) return 0;
+  const sameRequest = (item) => getRequestCountKey(item) === requestId || matchesStudentIdentity(item.request || item, request.name, request.code || "");
+  const assigned = state.draft.assignments.filter((item) => !isManualDraftItem(item) && sameRequest(item)).length;
+  const unassigned = state.draft.unassigned.filter((item) => !isManualDraftItem(item) && sameRequest(item)).length;
+  return assigned + unassigned;
+}
+
 function hasDraftContent() {
   return Boolean(
     state.draft.assignments.length ||
@@ -1736,8 +1783,9 @@ function findIssues(assignments, unassigned, dayLocations) {
 function renderCoach() {
   syncWeekPointers();
   ensureCoachDraft();
+  const changedRequests = reconcileDraftWithEffectiveRequests();
   const changedLocations = ensureDraftDayLocations();
-  if (normalizeDraftUnassigned() || changedLocations) {
+  if (changedRequests || normalizeDraftUnassigned() || changedLocations) {
     state.draft.issues = findIssues(state.draft.assignments, state.draft.unassigned, state.draft.dayLocations);
     saveState();
   }
